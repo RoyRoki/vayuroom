@@ -29,11 +29,17 @@ export function MessageList({ messages, localPeerId }: Props) {
     return (
         <div className="message-list">
             {messages.map((msg) => (
-                <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    isSelf={msg.senderId === localPeerId}
-                />
+                msg.type === 'system' ? (
+                    <div key={msg.id} className="system-message">
+                        {msg.text}
+                    </div>
+                ) : (
+                    <MessageBubble
+                        key={msg.id}
+                        message={msg}
+                        isSelf={msg.senderId === localPeerId}
+                    />
+                )
             ))}
             <div ref={bottomRef} />
         </div>

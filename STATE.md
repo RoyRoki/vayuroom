@@ -1,6 +1,6 @@
 # Vayuroom — Project State
 
-> **Last Updated:** 2026-02-15 05:19 IST
+> **Last Updated:** 2026-02-15 10:45 IST
 
 ---
 
@@ -14,8 +14,8 @@
 | **Phase 4** — Signaling Layer (Firebase RTDB) | ✅ Done | 100% |
 | **Phase 5** — WebRTC Engine | ✅ Done | 100% |
 | **Phase 6** — UI Components (Instagram Style) | ✅ Done | 100% |
-| **Phase 7** — Polish, Responsive & PWA | 🔲 Not Started | 0% |
-| **Phase 8** — Deploy (Vercel + GitHub CLI) | 🔲 Not Started | 0% |
+| **Phase 7** — Polish, Responsive & PWA | ✅ Done | 100% |
+| **Phase 8** — Deploy (Vercel + GitHub CLI) | ✅ Done | 100% |
 
 ---
 
@@ -45,9 +45,12 @@
 
 ## In Progress
 
-- [ ] Firebase rules deploy (`firebase deploy --only database`)
-- [ ] GitHub repo creation (`gh repo create`)
-- [ ] Dev server testing
+- [x] Firebase rules deploy (`firebase deploy --only database`)
+- [x] GitHub repo creation (`gh repo create`)
+- [x] Dev server testing
+- [x] PWA setup (manifest, sw.js, icons)
+- [x] Responsive styling audit (JoinScreen, RoomScreen, VideoCall)
+- [x] Vercel deployment (CLI, Env Vars)
 
 ## Blockers
 
@@ -59,9 +62,9 @@
 
 | Target | URL | Status |
 |---|---|---|
-| GitHub Repo | — | Not created yet |
-| Vercel | — | Not deployed |
-| Firebase RTDB | `vayuroom-default-rtdb.asia-southeast1` | Configured |
+| GitHub Repo | `https://github.com/RoyRoki/vayuroom` | Created & Pushed |
+| Vercel | `https://vayuroom.vercel.app` (likely) | Deployed |
+| Firebase RTDB | `vayuroom-default-rtdb.asia-southeast1` | Deployed & Active |
 | Metered TURN | `vayuroom.metered.live` | API key set |
 
 ---

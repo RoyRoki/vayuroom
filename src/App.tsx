@@ -7,6 +7,7 @@ import { useSignaling } from './hooks/useSignaling';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useMediaDevices } from './hooks/useMediaDevices';
 import { useRoomStore } from './store/useRoomStore';
+import { useChat } from './hooks/useChat';
 import { generatePeerId } from './lib/utils';
 import type { Signal, PresenceEntry } from './types';
 
@@ -20,7 +21,14 @@ export default function App() {
 
     const { derived, isLoading, derive, reset: resetCrypto } = useCrypto();
     const media = useMediaDevices();
-    const store = useRoomStore();
+
+    // Store Actions (Stable)
+    const setRoomHash = useRoomStore(s => s.setRoomHash);
+    const setConnectionStatus = useRoomStore(s => s.setConnectionStatus);
+    const removeRemotePeer = useRoomStore(s => s.removeRemotePeer);
+    const addRemotePeer = useRoomStore(s => s.addRemotePeer);
+    const resetStore = useRoomStore(s => s.reset);
+    const addSystemMessage = useRoomStore(s => s.addSystemMessage);
 
     /* ── Signaling callbacks ── */
     const handleSignalCb = useCallback((signal: Signal) => {
@@ -28,14 +36,16 @@ export default function App() {
     }, []);
 
     const handlePeerJoinCb = useCallback((peerId: string, entry: PresenceEntry) => {
-        toast(`${entry.displayName} joined`, { icon: '👋' });
+        addSystemMessage(`${entry.displayName} joined the chat`);
+        // Add to store immediately based on presence
+        addRemotePeer(peerId, entry.displayName);
         webrtcRef.current?.handlePeerJoin(peerId, entry);
-    }, []);
+    }, [addRemotePeer]);
 
     const handlePeerLeaveCb = useCallback((peerId: string) => {
-        toast(`A peer left the room`, { icon: '👋' });
-        store.removeRemotePeer(peerId);
-    }, []);
+        addSystemMessage(`A peer left the chat`);
+        removeRemotePeer(peerId);
+    }, [removeRemotePeer]);
 
     const signaling = useSignaling({
         roomHash: derived?.roomHash ?? '',
@@ -46,20 +56,28 @@ export default function App() {
         onPeerLeave: handlePeerLeaveCb,
     });
 
+    const chatHook = useChat({
+        roomHash: derived?.roomHash ?? '',
+        peerId: peerIdRef.current,
+        displayName: displayNameRef.current,
+        aesKey: derived?.aesKey ?? null,
+    });
+
     /* ── WebRTC (stored in ref so callbacks don't go stale) ── */
     const webrtcHook = useWebRTC({
         peerId: peerIdRef.current,
-        displayName: displayNameRef.current,
-        aesKey: derived?.aesKey ?? ({} as CryptoKey),
         localStream: media.localStream,
         sendSignal: signaling.sendSignal,
         joinOrder: signaling.joinOrder,
     });
+    const { connectionQuality } = webrtcHook;
 
     const webrtcRef = useRef(webrtcHook);
     useEffect(() => {
         webrtcRef.current = webrtcHook;
     }, [webrtcHook]);
+
+
 
     /* ── Join Room ── */
     const handleJoin = useCallback(async (passphrase: string) => {
@@ -69,21 +87,21 @@ export default function App() {
             return;
         }
 
-        store.setRoomHash(result.roomHash);
-        store.setConnectionStatus('joining');
+        setRoomHash(result.roomHash);
+        setConnectionStatus('joining');
 
         try {
             await webrtcHook.initIceServers();
-            await signaling.joinRoom();
-            store.setConnectionStatus('connected');
+            await signaling.joinRoom(result.roomHash);
+            setConnectionStatus('connected');
             setScreen('room');
-            toast.success('Joined room — encrypted & ephemeral');
+            addSystemMessage('You joined the room');
         } catch (err) {
             console.error('[App] Join failed:', err);
             toast.error('Failed to join room');
-            store.setConnectionStatus('failed');
+            setConnectionStatus('failed');
         }
-    }, [derive, signaling, webrtcHook, store]);
+    }, [derive, signaling, webrtcHook, setRoomHash, setConnectionStatus]);
 
     /* ── Leave Room ── */
     const handleLeave = useCallback(async () => {
@@ -91,30 +109,58 @@ export default function App() {
         media.stopMedia();
         webrtcHook.closeAll();
         await signaling.leaveRoom();
-        store.reset();
+        resetStore();
         resetCrypto();
         peerIdRef.current = generatePeerId();
         displayNameRef.current = peerIdRef.current;
         setScreen('join');
-        toast('Left the room', { icon: '🚪' });
-    }, [media, webrtcHook, signaling, store, resetCrypto]);
+        toast('Left the room', { icon: '🚪' }); // Keep toast for leaving entirely since we are out of chat view
+    }, [media, webrtcHook, signaling, resetStore, resetCrypto]);
+
+    /* ── Duplicate Tab Detection ── */
+    useEffect(() => {
+        const SESSION_KEY = 'vayuroom_session_id';
+        const mySessionId = crypto.randomUUID();
+
+        // Claim lock
+        localStorage.setItem(SESSION_KEY, mySessionId);
+
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key === SESSION_KEY && e.newValue !== mySessionId) {
+                // Another tab took over
+                toast.error('You opened Vroom in another tab. Disconnecting this one.', { duration: 10000 });
+                handleLeave();
+                setScreen('join'); // Optional: force them back to join screen
+            }
+        };
+
+        window.addEventListener('storage', handleStorage);
+        return () => {
+            window.removeEventListener('storage', handleStorage);
+        };
+    }, [handleLeave]);
 
     /* ── Call toggle ── */
-    const handleToggleCall = useCallback(async () => {
+    const handleToggleCall = useCallback(async (startWithVideo = false) => {
         if (isCallActive) {
+            // End call: remove tracks from peers, then stop media
+            webrtcHook.removeTracksFromAllPeers();
             media.stopMedia();
             setIsCallActive(false);
         } else {
             try {
-                await media.startMedia(true);
+                // Start call (audio only or audio+video)
+                const stream = await media.startMedia(startWithVideo);
+                // Add tracks to all existing peer connections → triggers renegotiation
+                webrtcHook.addTracksToAllPeers(stream);
                 setIsCallActive(true);
-                toast.success('Call started');
             } catch (err) {
-                toast.error('Could not access microphone/camera');
+                const msg = err instanceof Error ? err.message : 'Could not access media devices';
+                toast.error(msg);
                 console.error('[App] Media error:', err);
             }
         }
-    }, [isCallActive, media]);
+    }, [isCallActive, media, webrtcHook]);
 
     return (
         <>
@@ -143,7 +189,8 @@ export default function App() {
                     isAudioEnabled={media.isAudioEnabled}
                     isVideoEnabled={media.isVideoEnabled}
                     isCallActive={isCallActive}
-                    onSendMessage={webrtcHook.sendMessage}
+                    connectionQuality={connectionQuality}
+                    onSendMessage={chatHook.sendMessage}
                     onToggleAudio={media.toggleAudio}
                     onToggleVideo={media.toggleVideo}
                     onToggleCall={handleToggleCall}

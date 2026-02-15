@@ -34,8 +34,14 @@ export function useSignaling({
     const joinOrderRef = useRef(0);
 
     /* ── Presence ── */
-    const joinRoom = useCallback(async () => {
-        const presenceRef = ref(db, `rooms/${roomHash}/presence/${peerId}`);
+    const joinRoom = useCallback(async (overrideRoomHash?: string) => {
+        const targetHash = overrideRoomHash || roomHash;
+        if (!targetHash) {
+            console.error('[Signaling] Cannot join room: No room hash');
+            return;
+        }
+
+        const presenceRef = ref(db, `rooms/${targetHash}/presence/${peerId}`);
         const presenceData: PresenceEntry = {
             displayName,
             timestamp: now(),
@@ -52,7 +58,7 @@ export function useSignaling({
         // Heartbeat: update timestamp every 15s
         heartbeatRef.current = setInterval(async () => {
             try {
-                await set(ref(db, `rooms/${roomHash}/presence/${peerId}/timestamp`), now());
+                await set(ref(db, `rooms/${targetHash}/presence/${peerId}/timestamp`), now());
             } catch {
                 // ignore heartbeat errors
             }
@@ -89,6 +95,18 @@ export function useSignaling({
     );
 
     /* ── Listen for peer presence + signals ── */
+    /* ── Refs for callbacks to avoid re-subscriptions ── */
+    const onSignalRef = useRef(onSignal);
+    const onPeerJoinRef = useRef(onPeerJoin);
+    const onPeerLeaveRef = useRef(onPeerLeave);
+
+    useEffect(() => {
+        onSignalRef.current = onSignal;
+        onPeerJoinRef.current = onPeerJoin;
+        onPeerLeaveRef.current = onPeerLeave;
+    }, [onSignal, onPeerJoin, onPeerLeave]);
+
+    /* ── Listen for peer presence + signals ── */
     useEffect(() => {
         if (!roomHash || !peerId) return;
 
@@ -99,10 +117,12 @@ export function useSignaling({
         const unsubJoin = onChildAdded(presencePath, (snap) => {
             const id = snap.key;
             if (!id || id === peerId) return;
+
             const entry = snap.val() as PresenceEntry;
+
             // Ignore stale peers
             if (now() - entry.timestamp < PRESENCE_STALE_MS) {
-                onPeerJoin(id, entry);
+                onPeerJoinRef.current(id, entry);
             }
         });
 
@@ -110,7 +130,7 @@ export function useSignaling({
         const unsubLeave = onChildRemoved(presencePath, (snap) => {
             const id = snap.key;
             if (id && id !== peerId) {
-                onPeerLeave(id);
+                onPeerLeaveRef.current(id);
             }
         });
 
@@ -127,7 +147,7 @@ export function useSignaling({
                 return;
             }
 
-            onSignal(signal);
+            onSignalRef.current(signal);
             // Remove consumed signal
             remove(snap.ref).catch(() => { });
         });
@@ -137,7 +157,7 @@ export function useSignaling({
             unsubLeave();
             unsubSignals();
         };
-    }, [roomHash, peerId, onSignal, onPeerJoin, onPeerLeave]);
+    }, [roomHash, peerId]); // Removed callbacks from dependencies
 
     return {
         joinRoom,

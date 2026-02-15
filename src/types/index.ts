@@ -9,18 +9,22 @@ export interface Peer {
 }
 
 /* ── Message ── */
+export type MessageType = 'user' | 'system';
+
 export interface Message {
     id: string;
-    senderId: string;
-    senderName: string;
+    type?: MessageType;
+    senderId?: string;
+    senderName?: string;
     text: string;
     timestamp: number;
-    encrypted: string;
-    iv: string;
+    encrypted?: string;
+    iv?: string;
 }
 
 /* ── Room ── */
 export type ConnectionStatus = 'idle' | 'joining' | 'connected' | 'reconnecting' | 'failed';
+export type ConnectionQuality = 'good' | 'fair' | 'poor' | 'unknown';
 export type CallStatus = 'none' | 'active' | 'ended';
 
 export interface RoomState {
@@ -79,7 +83,7 @@ export interface MediaControls {
 /* ── Constants ── */
 export const MAX_PEERS = 3;
 export const HEARTBEAT_INTERVAL = 15_000;   // 15s
-export const PRESENCE_STALE_MS = 30_000;    // 30s
-export const SIGNAL_TTL_MS = 60_000;        // 60s
+export const PRESENCE_STALE_MS = 60 * 60 * 1000; // 1 hour (handling clock skew)
+export const SIGNAL_TTL_MS = 5 * 60 * 1000;    // 5 mins
 export const ICE_RESTART_MAX = 3;
 export const DATA_CHANNEL_LABEL = 'vayuroom-chat';

@@ -9,32 +9,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--gradient-ig);
     border-radius: var(--radius-md);
-    color: white;
+    overflow: hidden;
+}
+
+.logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .logo-sm .logo-icon {
     width: 28px;
     height: 28px;
-    padding: 5px;
 }
 
 .logo-md .logo-icon {
     width: 40px;
     height: 40px;
-    padding: 8px;
 }
 
 .logo-lg .logo-icon {
     width: 56px;
     height: 56px;
-    padding: 12px;
-}
-
-.logo-icon svg {
-    width: 100%;
-    height: 100%;
 }
 
 .logo-text {

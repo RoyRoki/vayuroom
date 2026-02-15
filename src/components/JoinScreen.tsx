@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Logo } from './Logo';
 import { PassphraseStrength } from './PassphraseStrength';
 import { generatePassphrase } from '../lib/utils';
-import { Shield, Shuffle, ArrowRight, Users, EyeOff, Lock } from 'lucide-react';
+import { Shield, Shuffle, ArrowRight, Users, EyeOff, Loader2 } from 'lucide-react';
 import './JoinScreen.css';
 
 interface Props {
@@ -38,7 +38,7 @@ export function JoinScreen({ onJoin, isLoading }: Props) {
                 <form onSubmit={handleSubmit} className="join-form">
                     <div className="join-input-group">
                         <div className="join-input-wrapper">
-                            <Lock size={18} className="join-input-icon" />
+
                             <input
                                 type={showPassphrase ? 'text' : 'password'}
                                 className="input input-lg join-input"
@@ -75,7 +75,7 @@ export function JoinScreen({ onJoin, isLoading }: Props) {
                         disabled={!passphrase.trim() || isLoading}
                     >
                         {isLoading ? (
-                            <span className="animate-spin" style={{ display: 'inline-flex' }}>⏳</span>
+                            <Loader2 size={20} className="animate-spin text-primary" />
                         ) : (
                             <>
                                 Join Room

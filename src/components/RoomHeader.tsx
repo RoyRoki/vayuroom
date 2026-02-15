@@ -1,55 +1,73 @@
 import { Logo } from './Logo';
 import { StatusIndicator } from './StatusIndicator';
-import { LogOut, Users } from 'lucide-react';
-import type { ConnectionStatus } from '../types';
+import { LogOut, Users, Phone, Video } from 'lucide-react';
+import type { ConnectionStatus, ConnectionQuality } from '../types';
 import { MAX_PEERS } from '../types';
 import './RoomHeader.css';
 
 interface Props {
     peerCount: number;
     connectionStatus: ConnectionStatus;
+    connectionQuality: ConnectionQuality;
     onLeave: () => void;
+    onToggleCall: (video?: boolean) => void;
+    isCallActive: boolean;
 }
 
-function getStatusType(status: ConnectionStatus): 'online' | 'connecting' | 'offline' {
+function getStatusType(status: ConnectionStatus, quality: ConnectionQuality): 'online' | 'connecting' | 'offline' | 'fair' | 'poor' {
     switch (status) {
-        case 'connected': return 'online';
+        case 'connected':
+            if (quality === 'good' || quality === 'unknown') return 'online';
+            return quality; // 'fair' or 'poor'
         case 'joining':
         case 'reconnecting': return 'connecting';
         default: return 'offline';
     }
 }
 
-function getStatusLabel(status: ConnectionStatus): string {
-    switch (status) {
-        case 'connected': return 'Connected';
-        case 'joining': return 'Joining...';
-        case 'reconnecting': return 'Reconnecting...';
-        case 'failed': return 'Connection failed';
-        default: return 'Idle';
-    }
-}
-
-export function RoomHeader({ peerCount, connectionStatus, onLeave }: Props) {
+export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onLeave, onToggleCall, isCallActive }: Props) {
     return (
         <header className="room-header">
-            <Logo size="sm" />
+            <div className="room-header-logo">
+                <Logo
+                    size="sm"
+                    iconOverlay={
+                        <StatusIndicator status={getStatusType(connectionStatus, connectionQuality)} />
+                    }
+                />
+            </div>
 
             <div className="room-header-info">
                 <div className="room-header-peers">
                     <Users size={14} />
                     <span>{peerCount}/{MAX_PEERS}</span>
                 </div>
-                <StatusIndicator
-                    status={getStatusType(connectionStatus)}
-                    label={getStatusLabel(connectionStatus)}
-                />
             </div>
 
-            <button className="btn btn-ghost room-leave-btn" onClick={onLeave}>
-                <LogOut size={18} />
-                <span className="room-leave-text">Leave</span>
-            </button>
+            <div className="room-header-actions">
+                {!isCallActive && (
+                    <>
+                        <button
+                            className="btn btn-ghost room-call-btn"
+                            onClick={() => onToggleCall(false)}
+                            title="Start audio call"
+                        >
+                            <Phone size={18} />
+                        </button>
+                        <button
+                            className="btn btn-ghost room-call-btn"
+                            onClick={() => onToggleCall(true)}
+                            title="Start video call"
+                        >
+                            <Video size={18} />
+                        </button>
+                    </>
+                )}
+
+                <button className="btn btn-ghost room-leave-btn" onClick={onLeave} title="Leave room">
+                    <LogOut size={18} />
+                </button>
+            </div>
         </header>
     );
 }

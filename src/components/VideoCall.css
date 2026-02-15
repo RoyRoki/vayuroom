@@ -58,6 +58,15 @@
     /* mirror */
 }
 
+@media (max-width: 480px) {
+    .video-local-pip {
+        width: 80px;
+        height: 112px;
+        bottom: var(--sp-2);
+        right: var(--sp-2);
+    }
+}
+
 .video-avatar-small {
     width: 100%;
     height: 100%;

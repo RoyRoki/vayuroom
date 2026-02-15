@@ -22,25 +22,44 @@ export function useMediaDevices(): UseMediaReturn {
     const blackTrackRef = useRef<MediaStreamTrack | null>(null);
 
     const startMedia = useCallback(async (video = false): Promise<MediaStream> => {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-            },
-            video: video
-                ? {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                    facingMode: 'user',
-                }
-                : false,
-        });
+        // Check if any audio input devices exist
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasAudio = devices.some(d => d.kind === 'audioinput');
+        if (!hasAudio) {
+            throw new Error('No microphone found on this device');
+        }
 
-        setLocalStream(stream);
-        setIsAudioEnabled(true);
-        setIsVideoEnabled(video);
-        return stream;
+        try {
+            // Try with detailed constraints first
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                },
+                video: video
+                    ? {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user',
+                    }
+                    : false,
+            });
+            setLocalStream(stream);
+            setIsAudioEnabled(true);
+            setIsVideoEnabled(video);
+            return stream;
+        } catch {
+            // Fallback: try with simple constraints
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: true,
+                video: video,
+            });
+            setLocalStream(stream);
+            setIsAudioEnabled(true);
+            setIsVideoEnabled(video);
+            return stream;
+        }
     }, []);
 
     const stopMedia = useCallback(() => {

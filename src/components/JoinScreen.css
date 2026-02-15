@@ -47,21 +47,20 @@
     align-items: center;
 }
 
-.join-input-icon {
-    position: absolute;
-    left: var(--sp-4);
-    color: var(--text-tertiary);
-    pointer-events: none;
+.join-input {
+    padding-left: var(--sp-4);
+    padding-right: 48px;
+    width: 100%;
 }
 
-.join-input {
-    padding-left: 44px;
-    padding-right: 44px;
+.join-input::-ms-reveal,
+.join-input::-ms-clear {
+    display: none;
 }
 
 .join-eye-btn {
     position: absolute;
-    right: var(--sp-2);
+    right: 6px;
     display: flex;
     align-items: center;
     justify-content: center;

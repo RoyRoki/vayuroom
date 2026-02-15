@@ -1,8 +1,7 @@
 import { RoomHeader } from './RoomHeader';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
-import { CallControls } from './CallControls';
-import { VideoCall } from './VideoCall';
+import { AudioCall } from './AudioCall';
 import { useRoomStore } from '../store/useRoomStore';
 import './RoomScreen.css';
 
@@ -15,26 +14,27 @@ interface Props {
     onSendMessage: (text: string) => void;
     onToggleAudio: () => void;
     onToggleVideo: () => void;
-    onToggleCall: () => void;
+    onToggleCall: (video?: boolean) => void;
     onLeave: () => void;
+    connectionQuality: import('../types').ConnectionQuality;
 }
 
 export function RoomScreen({
     localPeerId,
-    localStream,
     isAudioEnabled,
-    isVideoEnabled,
     isCallActive,
     onSendMessage,
     onToggleAudio,
-    onToggleVideo,
     onToggleCall,
     onLeave,
+    connectionQuality,
 }: Props) {
     const messages = useRoomStore((s) => s.messages);
     const remotePeers = useRoomStore((s) => s.remotePeers);
-    const peerCount = useRoomStore((s) => s.peerCount);
     const connectionStatus = useRoomStore((s) => s.connectionStatus);
+
+    // Derive peer count from remote peers + 1 (local user)
+    const peerCount = remotePeers ? Object.keys(remotePeers).length + 1 : 1;
 
     return (
         <div className="room-screen">
@@ -42,15 +42,10 @@ export function RoomScreen({
                 peerCount={peerCount}
                 connectionStatus={connectionStatus}
                 onLeave={onLeave}
+                onToggleCall={onToggleCall}
+                isCallActive={isCallActive}
+                connectionQuality={connectionQuality}
             />
-
-            {isCallActive && (
-                <VideoCall
-                    localStream={localStream}
-                    remotePeers={remotePeers}
-                    isVideoEnabled={isVideoEnabled}
-                />
-            )}
 
             <MessageList messages={messages} localPeerId={localPeerId} />
 
@@ -59,14 +54,16 @@ export function RoomScreen({
                 disabled={connectionStatus !== 'connected' && connectionStatus !== 'joining'}
             />
 
-            <CallControls
-                isAudioEnabled={isAudioEnabled}
-                isVideoEnabled={isVideoEnabled}
-                isCallActive={isCallActive}
-                onToggleAudio={onToggleAudio}
-                onToggleVideo={onToggleVideo}
-                onToggleCall={onToggleCall}
-            />
+            {/* Instagram-style audio call overlay */}
+            {isCallActive && (
+                <AudioCall
+                    peerCount={peerCount}
+                    isAudioEnabled={isAudioEnabled}
+                    remotePeers={remotePeers}
+                    onToggleAudio={onToggleAudio}
+                    onEndCall={onToggleCall}
+                />
+            )}
         </div>
     );
 }

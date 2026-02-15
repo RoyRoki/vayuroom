@@ -16,6 +16,7 @@ interface RoomStore {
     setCallStatus: (status: CallStatus) => void;
 
     addMessage: (msg: Message) => void;
+    addSystemMessage: (text: string) => void;
     clearMessages: () => void;
 
     addRemotePeer: (id: string, displayName: string) => void;
@@ -43,19 +44,44 @@ export const useRoomStore = create<RoomStore>((set) => ({
     setCallStatus: (status) => set({ callStatus: status }),
 
     addMessage: (msg) =>
-        set((s) => ({ messages: [...s.messages, msg] })),
+        set((s) => {
+            if (s.messages.some(m => m.id === msg.id)) {
+                return s;
+            }
+            return { messages: [...s.messages, msg] };
+        }),
+
+    addSystemMessage: (text) =>
+        set((s) => ({
+            messages: [
+                ...s.messages,
+                {
+                    id: crypto.randomUUID(),
+                    type: 'system',
+                    text,
+                    timestamp: Date.now(),
+                },
+            ],
+        })),
 
     clearMessages: () => set({ messages: [] }),
 
     addRemotePeer: (id, displayName) =>
         set((s) => {
-            const peer: Peer = {
+            const existing = s.remotePeers[id];
+            // If peer exists, just update display name (or do nothing if we want to preserve state)
+            // But we should probably preserve connectionState and streams if they exist.
+            const peer: Peer = existing ? {
+                ...existing,
+                displayName,
+            } : {
                 id,
                 displayName,
                 isAudioEnabled: true,
                 isVideoEnabled: false,
                 connectionState: 'new',
             };
+
             const remotePeers = { ...s.remotePeers, [id]: peer };
             return { remotePeers, peerCount: Object.keys(remotePeers).length + 1 };
         }),

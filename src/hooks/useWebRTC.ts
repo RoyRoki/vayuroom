@@ -1,14 +1,12 @@
-import { useRef, useCallback } from 'react';
-import { fetchIceServers, fallbackIceServers } from '../lib/iceServers';
-import { encrypt, decrypt } from '../lib/crypto';
-import { generateId, now } from '../lib/utils';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { useRoomStore } from '../store/useRoomStore';
 import {
     MAX_PEERS,
     ICE_RESTART_MAX,
-    DATA_CHANNEL_LABEL,
+    // SIGNAL_TTL_MS,
+    // DATA_CHANNEL_LABEL
 } from '../types';
-import type { Signal, Message, PresenceEntry } from '../types';
+import type { Signal, PresenceEntry } from '../types';
 
 interface PeerConnection {
     pc: RTCPeerConnection;
@@ -19,17 +17,25 @@ interface PeerConnection {
 
 interface UseWebRTCProps {
     peerId: string;
-    displayName: string;
-    aesKey: CryptoKey;
     localStream: MediaStream | null;
     sendSignal: (signal: Omit<Signal, 'id' | 'timestamp' | 'politeness'>) => Promise<void>;
     joinOrder: number;
 }
 
+// Fallback ICE servers in case fetch fails
+const fallbackIceServers: RTCIceServer[] = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' }
+];
+
+// Mock fetchIceServers if not available
+const fetchIceServers = async (): Promise<RTCIceServer[]> => {
+    // In a real app, you'd fetch TURN servers here
+    return fallbackIceServers;
+};
+
 export function useWebRTC({
     peerId,
-    displayName,
-    aesKey,
     localStream,
     sendSignal,
     joinOrder,
@@ -37,7 +43,6 @@ export function useWebRTC({
     const connections = useRef<Map<string, PeerConnection>>(new Map());
     const iceServersRef = useRef<RTCIceServer[]>(fallbackIceServers);
 
-    const addMessage = useRoomStore((s) => s.addMessage);
     const addRemotePeer = useRoomStore((s) => s.addRemotePeer);
     const removeRemotePeer = useRoomStore((s) => s.removeRemotePeer);
     const updatePeerState = useRoomStore((s) => s.updatePeerState);
@@ -114,11 +119,23 @@ export function useWebRTC({
                 }
             };
 
-            // Data channel (for chat)
-            pc.ondatachannel = (e) => {
-                const dc = e.channel;
-                entry.dc = dc;
-                setupDataChannel(dc, remotePeerId);
+            // Auto-renegotiate when tracks are added/removed
+            pc.onnegotiationneeded = async () => {
+                try {
+                    entry.makingOffer = true;
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    await sendSignal({
+                        type: 'offer',
+                        senderId: peerId,
+                        targetId: remotePeerId,
+                        payload: pc.localDescription!.toJSON(),
+                    });
+                } catch (err) {
+                    console.error('[WebRTC] Negotiation needed failed:', err);
+                } finally {
+                    entry.makingOffer = false;
+                }
             };
 
             connections.current.set(remotePeerId, entry);
@@ -126,66 +143,6 @@ export function useWebRTC({
             return entry;
         },
         [localStream, peerId, sendSignal, addRemotePeer, updatePeerState, updatePeerStream]
-    );
-
-    /* ── Data Channel setup ── */
-    const setupDataChannel = useCallback(
-        (dc: RTCDataChannel, remotePeerId: string) => {
-            dc.onmessage = async (e) => {
-                try {
-                    const { encrypted, iv, senderName, timestamp, id } = JSON.parse(e.data);
-                    const text = await decrypt(aesKey, encrypted, iv);
-                    const msg: Message = {
-                        id,
-                        senderId: remotePeerId,
-                        senderName,
-                        text,
-                        timestamp,
-                        encrypted,
-                        iv,
-                    };
-                    addMessage(msg);
-                } catch (err) {
-                    console.error('[DataChannel] Failed to decrypt message:', err);
-                }
-            };
-        },
-        [aesKey, addMessage]
-    );
-
-    /* ── Send chat message ── */
-    const sendMessage = useCallback(
-        async (text: string) => {
-            const { encrypted, iv } = await encrypt(aesKey, text);
-            const msg: Message = {
-                id: generateId(),
-                senderId: peerId,
-                senderName: displayName,
-                text,
-                timestamp: now(),
-                encrypted,
-                iv,
-            };
-
-            // Send to all connected peers via data channel
-            const payload = JSON.stringify({
-                id: msg.id,
-                encrypted: msg.encrypted,
-                iv: msg.iv,
-                senderName: msg.senderName,
-                timestamp: msg.timestamp,
-            });
-
-            connections.current.forEach(({ dc }) => {
-                if (dc && dc.readyState === 'open') {
-                    dc.send(payload);
-                }
-            });
-
-            // Add to local messages
-            addMessage(msg);
-        },
-        [aesKey, peerId, displayName, addMessage]
     );
 
     /* ── Handle incoming signals ── */
@@ -213,7 +170,7 @@ export function useWebRTC({
                 }
 
                 if (!entry) {
-                    entry = createConnection(senderId, `User-${senderId.slice(-4).toUpperCase()}`)!;
+                    entry = createConnection(senderId, `User - ${senderId.slice(-4).toUpperCase()}`)!;
                     if (!entry) return;
                 }
 
@@ -261,11 +218,6 @@ export function useWebRTC({
                 if (!entry) return;
             }
 
-            // Create data channel (only the initiator creates it)
-            const dc = entry.pc.createDataChannel(DATA_CHANNEL_LABEL);
-            entry.dc = dc;
-            setupDataChannel(dc, remotePeerId);
-
             // Create offer
             entry.makingOffer = true;
             const offer = await entry.pc.createOffer();
@@ -278,7 +230,7 @@ export function useWebRTC({
                 payload: entry.pc.localDescription!.toJSON(),
             });
         },
-        [peerId, sendSignal, createConnection, setupDataChannel]
+        [peerId, sendSignal, createConnection]
     );
 
     /* ── Handle peer join from presence ── */
@@ -292,6 +244,47 @@ export function useWebRTC({
         },
         [joinOrder, connectToPeer]
     );
+
+    /* ── Add tracks to all existing peers (for mid-session call start) ── */
+    const addTracksToAllPeers = useCallback(
+        (stream: MediaStream) => {
+            connections.current.forEach((entry) => {
+                const pc = entry.pc;
+                const existingSenders = pc.getSenders();
+
+                stream.getTracks().forEach((track) => {
+                    // Check if a sender for this track kind already exists
+                    const existingSender = existingSenders.find(
+                        (s) => s.track?.kind === track.kind
+                    );
+
+                    if (existingSender) {
+                        // Replace the track on the existing sender (no renegotiation needed)
+                        existingSender.replaceTrack(track);
+                    } else {
+                        // Add new track — triggers onnegotiationneeded automatically
+                        pc.addTrack(track, stream);
+                    }
+                });
+            });
+            console.log('[WebRTC] Added tracks to all peers');
+        },
+        []
+    );
+
+    /* ── Remove media tracks from all peers (for ending call) ── */
+    const removeTracksFromAllPeers = useCallback(() => {
+        connections.current.forEach((entry) => {
+            const pc = entry.pc;
+            const senders = pc.getSenders();
+            senders.forEach((sender) => {
+                if (sender.track) {
+                    pc.removeTrack(sender);
+                }
+            });
+        });
+        console.log('[WebRTC] Removed tracks from all peers');
+    }, []);
 
     /* ── Close one connection ── */
     const closeConnection = useCallback(
@@ -316,13 +309,60 @@ export function useWebRTC({
         connections.current.clear();
     }, []);
 
+    /* ── Connection Quality Polling ── */
+    const [connectionQuality, setConnectionQuality] = useState<import('../types').ConnectionQuality>('unknown');
+
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            let hasConnected = false;
+            let maxRtt = 0;
+            let maxLoss = 0;
+
+            for (const entry of connections.current.values()) {
+                if (entry.pc.connectionState === 'connected') {
+                    hasConnected = true;
+                    try {
+                        const stats = await entry.pc.getStats();
+                        stats.forEach(report => {
+                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                maxRtt = Math.max(maxRtt, report.currentRoundTripTime * 1000);
+                            }
+                            if (report.type === 'inbound-rtp' && (report.kind === 'video' || report.kind === 'audio')) {
+                                if (report.packetsReceived > 0) {
+                                    const loss = report.packetsLost / (report.packetsReceived + report.packetsLost);
+                                    maxLoss = Math.max(maxLoss, loss);
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('Failed to get stats', e);
+                    }
+                }
+            }
+
+            if (!hasConnected) {
+                setConnectionQuality('unknown');
+            } else if (maxRtt < 100 && maxLoss < 0.02) {
+                setConnectionQuality('good');
+            } else if (maxRtt < 400 && maxLoss < 0.10) {
+                setConnectionQuality('fair');
+            } else {
+                setConnectionQuality('poor');
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, []);
+
     return {
         initIceServers,
         handleSignal,
         handlePeerJoin,
-        sendMessage,
         closeAll,
         connectToPeer,
         closeConnection,
+        addTracksToAllPeers,
+        removeTracksFromAllPeers,
+        connectionQuality,
     };
 }

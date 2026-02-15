@@ -1,0 +1,293 @@
+/* ── Audio Call Overlay (Instagram Style) ── */
+
+.audio-call-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, #1a0533 0%, #0d0017 40%, #0a0a0a 100%);
+    animation: audioCallSlideUp 0.4s var(--ease-default) forwards;
+    padding: var(--sp-8) var(--sp-4);
+    padding-bottom: env(safe-area-inset-bottom, var(--sp-8));
+}
+
+@keyframes audioCallSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Top Section ── */
+
+.audio-call-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-1);
+    padding-top: var(--sp-6);
+}
+
+.audio-call-label {
+    font-size: var(--fs-sm);
+    color: var(--text-secondary);
+    font-weight: var(--fw-medium);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.audio-call-encrypt {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+}
+
+/* ── Center Section (Avatar + Info) ── */
+
+.audio-call-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-6);
+    flex: 1;
+    justify-content: center;
+}
+
+.audio-call-avatar-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+}
+
+.audio-call-avatar {
+    width: 140px;
+    height: 140px;
+    border-radius: var(--radius-full);
+    background: linear-gradient(135deg, #833AB4, #FD1D1D, #F77737);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 3;
+    box-shadow: 0 0 60px rgba(131, 58, 180, 0.3);
+}
+
+.audio-call-avatar-inner {
+    width: 132px;
+    height: 132px;
+    border-radius: var(--radius-full);
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audio-call-avatar-icon {
+    color: var(--text-primary);
+    opacity: 0.9;
+}
+
+/* ── Pulse Rings ── */
+
+.audio-call-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border-radius: var(--radius-full);
+    border: 1.5px solid rgba(131, 58, 180, 0.5);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.audio-call-ring--1 {
+    width: 180px;
+    height: 180px;
+    animation: audioRingPulse 2.4s ease-out infinite;
+}
+
+.audio-call-ring--2 {
+    width: 220px;
+    height: 220px;
+    animation: audioRingPulse 2.4s ease-out 0.6s infinite;
+}
+
+.audio-call-ring--3 {
+    width: 260px;
+    height: 260px;
+    animation: audioRingPulse 2.4s ease-out 1.2s infinite;
+}
+
+@keyframes audioRingPulse {
+    0% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(0.85);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1.15);
+    }
+}
+
+/* ── Call Info ── */
+
+.audio-call-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.audio-call-name {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+}
+
+.audio-call-status {
+    font-size: var(--fs-base);
+    color: var(--text-secondary);
+    font-weight: var(--fw-regular);
+}
+
+.audio-call-timer {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+}
+
+/* ── Bottom Controls ── */
+
+.audio-call-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-8);
+    padding: var(--sp-6) var(--sp-4);
+    width: 100%;
+    max-width: 320px;
+}
+
+.audio-call-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition-default);
+    position: relative;
+}
+
+.audio-call-btn:active {
+    transform: scale(0.9);
+}
+
+.audio-call-btn--mute {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.audio-call-btn--mute.is-muted {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.audio-call-btn--speaker {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.audio-call-btn--speaker.is-active {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.audio-call-btn--end {
+    width: 64px;
+    height: 64px;
+    background: var(--accent-red);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(237, 73, 86, 0.4);
+}
+
+.audio-call-btn--end:hover {
+    background: #d6384a;
+}
+
+.audio-call-btn-label {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-weight: var(--fw-medium);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 480px) {
+    .audio-call-avatar-wrap {
+        width: 120px;
+        height: 120px;
+    }
+
+    .audio-call-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .audio-call-avatar-inner {
+        width: 112px;
+        height: 112px;
+    }
+
+    .audio-call-ring--1 {
+        width: 160px;
+        height: 160px;
+    }
+
+    .audio-call-ring--2 {
+        width: 196px;
+        height: 196px;
+    }
+
+    .audio-call-ring--3 {
+        width: 232px;
+        height: 232px;
+    }
+
+    .audio-call-controls {
+        gap: var(--sp-6);
+    }
+
+    .audio-call-btn {
+        width: 52px;
+        height: 52px;
+    }
+
+    .audio-call-btn--end {
+        width: 60px;
+        height: 60px;
+    }
+}

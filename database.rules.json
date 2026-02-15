@@ -5,14 +5,10 @@
                 ".read": true,
                 ".write": true,
                 "presence": {
-                    "$peerId": {
-                        ".validate": "newData.hasChildren(['timestamp', 'displayName', 'order'])"
-                    }
+                    "$peerId": {}
                 },
                 "signals": {
-                    "$signalId": {
-                        ".validate": "newData.hasChildren(['type', 'senderId', 'targetId', 'timestamp'])"
-                    }
+                    "$signalId": {}
                 }
             }
         }

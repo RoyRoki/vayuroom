@@ -9,6 +9,25 @@
     flex-shrink: 0;
 }
 
+.room-header-logo {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.room-header-logo .status-indicator {
+    position: absolute;
+    bottom: -1px;
+    right: -2px;
+}
+
+.room-header-logo .status-dot {
+    width: 9px;
+    height: 9px;
+    border: 2px solid var(--bg-primary);
+    border-radius: 50%;
+}
+
 .room-header-info {
     display: flex;
     align-items: center;
@@ -22,6 +41,25 @@
     font-size: var(--fs-sm);
     color: var(--text-secondary);
     font-weight: var(--fw-medium);
+}
+
+.room-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.room-call-btn {
+    color: var(--text-primary);
+    font-size: var(--fs-sm);
+    padding: var(--sp-2);
+    min-height: 36px;
+    border-radius: var(--radius-full);
+}
+
+.room-call-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--accent-green);
 }
 
 .room-leave-btn {

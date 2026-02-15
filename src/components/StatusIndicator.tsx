@@ -1,7 +1,7 @@
 import './StatusIndicator.css';
 
 interface Props {
-    status: 'online' | 'connecting' | 'offline';
+    status: 'online' | 'connecting' | 'offline' | 'fair' | 'poor';
     label?: string;
 }
 

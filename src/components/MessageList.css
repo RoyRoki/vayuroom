@@ -85,3 +85,12 @@
     color: var(--text-tertiary);
     padding: 0 var(--sp-1);
 }
+
+.system-message {
+    align-self: center;
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    margin: var(--sp-2) 0;
+    text-align: center;
+    max-width: 80%;
+}
