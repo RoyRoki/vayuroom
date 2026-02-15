@@ -1,0 +1,39 @@
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.status-dot {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.status-online .status-dot {
+    background: var(--accent-green);
+}
+
+.status-connecting .status-dot {
+    background: var(--accent-orange);
+}
+
+.status-offline .status-dot {
+    background: var(--text-tertiary);
+}
+
+.status-ring {
+    position: absolute;
+    inset: -3px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--accent-orange);
+    animation: pulseRing 1.5s ease-out infinite;
+}
+
+.status-label {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    font-weight: var(--fw-medium);
+}

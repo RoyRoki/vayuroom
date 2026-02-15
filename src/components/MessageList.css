@@ -1,0 +1,87 @@
+.message-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--sp-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+}
+
+.message-list-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: var(--sp-8);
+}
+
+.message-list-empty p {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-medium);
+    color: var(--text-secondary);
+}
+
+.message-list-empty span {
+    font-size: var(--fs-sm);
+    max-width: 260px;
+    line-height: var(--lh-relaxed);
+}
+
+/* ── Bubble Wrap ── */
+.bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    max-width: var(--bubble-max-width);
+    gap: 2px;
+}
+
+.bubble-self {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.bubble-other {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+/* ── Bubble ── */
+.bubble {
+    padding: var(--sp-2) var(--sp-3);
+    border-radius: var(--bubble-radius);
+    word-break: break-word;
+}
+
+.bubble-blue {
+    background: var(--accent-blue);
+    color: white;
+    border-bottom-right-radius: 4px;
+}
+
+.bubble-gray {
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+
+.bubble-text {
+    font-size: var(--fs-base);
+    line-height: var(--lh-normal);
+}
+
+.bubble-name {
+    font-size: var(--fs-xs);
+    color: var(--accent-blue);
+    font-weight: var(--fw-medium);
+    padding-left: var(--sp-1);
+}
+
+.bubble-time {
+    font-size: 10px;
+    color: var(--text-tertiary);
+    padding: 0 var(--sp-1);
+}

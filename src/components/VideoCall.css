@@ -1,0 +1,70 @@
+.video-call {
+    position: relative;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+    min-height: 180px;
+    max-height: 40vh;
+    overflow: hidden;
+}
+
+.video-remote {
+    position: relative;
+    flex: 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-tertiary);
+}
+
+.video-el {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.video-hidden {
+    display: none;
+}
+
+.video-label {
+    position: absolute;
+    bottom: var(--sp-2);
+    left: var(--sp-2);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    color: white;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 2px var(--sp-2);
+    border-radius: var(--radius-full);
+}
+
+.video-local-pip {
+    position: absolute;
+    bottom: var(--sp-3);
+    right: var(--sp-3);
+    width: 100px;
+    height: 140px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 2px solid var(--border);
+    background: var(--bg-tertiary);
+    z-index: 2;
+}
+
+.video-local-pip .video-el {
+    transform: scaleX(-1);
+    /* mirror */
+}
+
+.video-avatar-small {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+}

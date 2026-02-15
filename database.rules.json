@@ -1,0 +1,20 @@
+{
+    "rules": {
+        "rooms": {
+            "$roomHash": {
+                ".read": true,
+                ".write": true,
+                "presence": {
+                    "$peerId": {
+                        ".validate": "newData.hasChildren(['timestamp', 'displayName', 'order'])"
+                    }
+                },
+                "signals": {
+                    "$signalId": {
+                        ".validate": "newData.hasChildren(['type', 'senderId', 'targetId', 'timestamp'])"
+                    }
+                }
+            }
+        }
+    }
+}

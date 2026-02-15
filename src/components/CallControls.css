@@ -1,0 +1,59 @@
+.call-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-4);
+    padding: var(--sp-3) var(--sp-4);
+    border-top: 1px solid var(--border);
+    background: var(--bg-primary);
+}
+
+.call-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transition: var(--transition-default);
+    border: none;
+    cursor: pointer;
+}
+
+.call-btn:hover {
+    background: var(--bg-elevated);
+}
+
+.call-btn:active {
+    transform: scale(0.92);
+}
+
+.call-btn.active {
+    background: var(--accent-red);
+    color: white;
+}
+
+.call-toggle {
+    width: 52px;
+    height: 52px;
+}
+
+.call-start {
+    background: var(--accent-green);
+    color: white;
+}
+
+.call-start:hover {
+    background: #4db31e;
+}
+
+.call-end {
+    background: var(--accent-red);
+    color: white;
+}
+
+.call-end:hover {
+    background: #d6384a;
+}

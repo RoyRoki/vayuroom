@@ -1,0 +1,232 @@
+/* ── Buttons ── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-sm);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-base);
+    line-height: 1;
+    transition: var(--transition-default);
+    user-select: none;
+    white-space: nowrap;
+    min-height: 44px;
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-primary {
+    background: var(--accent-blue);
+    color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-blue-hover);
+}
+
+.btn-danger {
+    background: var(--accent-red);
+    color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #d6384a;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+}
+
+.btn-ghost:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+}
+
+.btn-outline:hover:not(:disabled) {
+    border-color: var(--border-active);
+    background: var(--bg-tertiary);
+}
+
+.btn-icon {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: var(--radius-full);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.btn-icon:hover:not(:disabled) {
+    background: var(--bg-elevated);
+}
+
+.btn-icon.active {
+    background: var(--accent-red);
+    color: white;
+}
+
+.btn-lg {
+    min-height: 48px;
+    padding: var(--sp-4) var(--sp-6);
+    font-size: var(--fs-md);
+    border-radius: var(--radius-md);
+}
+
+.btn-full {
+    width: 100%;
+}
+
+.btn-gradient {
+    background: var(--gradient-ig);
+    color: #ffffff;
+    font-weight: var(--fw-bold);
+}
+
+.btn-gradient:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+/* ── Inputs ── */
+.input {
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: var(--fs-md);
+    min-height: 44px;
+    transition: var(--transition-default);
+}
+
+.input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.input:focus {
+    border-color: var(--border-active);
+    background: var(--bg-secondary);
+}
+
+.input-lg {
+    min-height: 48px;
+    font-size: var(--fs-md);
+    padding: var(--sp-4);
+    border-radius: var(--radius-md);
+}
+
+/* ── Cards ── */
+.card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--sp-6);
+}
+
+.card-elevated {
+    background: var(--gradient-surface);
+    box-shadow: var(--shadow-md);
+}
+
+/* ── Badges ── */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-2);
+    border-radius: var(--radius-full);
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+}
+
+.badge-green {
+    background: rgba(88, 195, 34, 0.15);
+    color: var(--accent-green);
+}
+
+.badge-red {
+    background: rgba(237, 73, 86, 0.15);
+    color: var(--accent-red);
+}
+
+.badge-orange {
+    background: rgba(252, 163, 38, 0.15);
+    color: var(--accent-orange);
+}
+
+/* ── Divider ── */
+.divider {
+    height: 1px;
+    background: var(--border);
+    border: none;
+    margin: var(--sp-4) 0;
+}
+
+/* ── Screen layout ── */
+.screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    max-width: var(--max-content);
+    margin: 0 auto;
+    width: 100%;
+}
+
+.screen-centered {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: var(--sp-6);
+}
+
+/* ── Text utilities ── */
+.text-secondary {
+    color: var(--text-secondary);
+}
+
+.text-tertiary {
+    color: var(--text-tertiary);
+}
+
+.text-accent {
+    color: var(--accent-blue);
+}
+
+.text-sm {
+    font-size: var(--fs-sm);
+}
+
+.text-xs {
+    font-size: var(--fs-xs);
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-gradient {
+    background: var(--gradient-ig);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}

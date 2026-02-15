@@ -1,0 +1,108 @@
+.join-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: var(--sp-6);
+    gap: var(--sp-8);
+}
+
+.join-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-6);
+    width: 100%;
+    max-width: 380px;
+    padding: var(--sp-8) var(--sp-6);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+}
+
+.join-tagline {
+    color: var(--text-secondary);
+    font-size: var(--fs-sm);
+    text-align: center;
+    margin-top: calc(-1 * var(--sp-2));
+}
+
+.join-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    width: 100%;
+}
+
+.join-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+}
+
+.join-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.join-input-icon {
+    position: absolute;
+    left: var(--sp-4);
+    color: var(--text-tertiary);
+    pointer-events: none;
+}
+
+.join-input {
+    padding-left: 44px;
+    padding-right: 44px;
+}
+
+.join-eye-btn {
+    position: absolute;
+    right: var(--sp-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    color: var(--text-tertiary);
+    transition: var(--transition-fast);
+}
+
+.join-eye-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-elevated);
+}
+
+.join-generate {
+    font-size: var(--fs-sm);
+    color: var(--accent-blue);
+}
+
+.join-generate:hover {
+    color: var(--accent-blue-hover);
+    background: transparent;
+}
+
+.join-features {
+    display: flex;
+    gap: var(--sp-4);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.join-feature {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-1);
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+}
+
+.join-footer {
+    max-width: 320px;
+    line-height: var(--lh-relaxed);
+}
