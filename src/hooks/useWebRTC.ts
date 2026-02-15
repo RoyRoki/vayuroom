@@ -309,28 +309,10 @@ export function useWebRTC({
                     pc.addTrack(track, stream);
                     console.log(`[WebRTC] Added new ${track.kind} track for ${remotePeerId}`);
                 });
-
-                // Force renegotiation so the remote side knows about our tracks
-                try {
-                    entry.makingOffer = true;
-                    const offer = await pc.createOffer();
-                    await pc.setLocalDescription(offer);
-                    await sendSignal({
-                        type: 'offer',
-                        senderId: peerId,
-                        targetId: remotePeerId,
-                        payload: pc.localDescription!.toJSON(),
-                    });
-                    console.log(`[WebRTC] Renegotiated with ${remotePeerId} after adding tracks`);
-                } catch (err) {
-                    console.error('[WebRTC] Renegotiation failed:', err);
-                } finally {
-                    entry.makingOffer = false;
-                }
             }
             console.log('[WebRTC] Added tracks to all peers');
         },
-        [peerId, sendSignal]
+        [peerId]
     );
 
     /* ── Remove media tracks from all peers (for ending call) ── */
