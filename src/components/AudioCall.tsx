@@ -107,7 +107,9 @@ export function AudioCall({
 
                 <div className="audio-call-info">
                     <span className="audio-call-name">
-                        {peerCount > 2 ? 'Group Call' : 'Audio Call'}
+                        {peerCount > 2
+                            ? 'Group Call'
+                            : (remoteEntries[0]?.[1]?.displayName || 'Audio Call')}
                     </span>
                     {isConnected ? (
                         <span className="audio-call-timer">{formatTime(elapsed)}</span>
