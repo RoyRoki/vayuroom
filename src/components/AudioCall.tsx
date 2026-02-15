@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Volume2, PhoneOff, Lock, User } from 'lucide-react';
+import { Mic, MicOff, Volume2, PhoneOff, Lock, User, Phone } from 'lucide-react';
 import type { Peer } from '../types';
 import './AudioCall.css';
 
@@ -118,7 +118,11 @@ export function AudioCall({
                 <div className="audio-call-avatar-wrap">
                     <div className={`audio-call-avatar ${isConnected ? 'is-connected' : 'is-calling'}`}>
                         <div className="audio-call-avatar-inner">
-                            <User size={48} className="audio-call-avatar-icon" />
+                            {!isConnected ? (
+                                <Phone size={48} className="audio-call-avatar-icon animate-pulse-slow" />
+                            ) : (
+                                <User size={48} className="audio-call-avatar-icon" />
+                            )}
                         </div>
                     </div>
                     {/* Pulse rings — only animate when connected */}
@@ -137,7 +141,13 @@ export function AudioCall({
                     </span>
 
                     {!isConnected ? (
-                        <span className="audio-call-status animate-pulse">Calling...</span>
+                        <div className="audio-call-status-wrap">
+                            <Phone size={16} className="animate-pulse" />
+                            <span className="audio-call-status">Calling</span>
+                            <div className="audio-call-status-dots">
+                                <span>.</span><span>.</span><span>.</span>
+                            </div>
+                        </div>
                     ) : (
                         <div className="audio-call-timer-wrap">
                             <span className="audio-call-timer">{formatTime(elapsed)}</span>

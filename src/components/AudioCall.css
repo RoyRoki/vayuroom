@@ -127,6 +127,40 @@
     animation: audioRingPulse 2.4s ease-out 1.2s infinite;
 }
 
+.audio-call-status-wrap {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-secondary);
+}
+
+.audio-call-status-dots span {
+    animation: audioDots 1.4s infinite;
+    opacity: 0;
+}
+
+.audio-call-status-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.audio-call-status-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes audioDots {
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
 @keyframes audioRingPulse {
     0% {
         opacity: 0.6;
@@ -204,15 +238,55 @@
     gap: var(--sp-3);
 }
 
+.audio-call-name {
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-semibold);
+    color: var(--text-primary);
+}
+
+.audio-call-status {
+    font-size: var(--fs-base);
+    color: var(--text-secondary);
+    font-weight: var(--fw-regular);
+}
+
 .audio-call-timer-wrap {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
 }
 
+.audio-call-timer {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+}
+
 .audio-call-count {
     font-size: var(--fs-sm);
     color: var(--text-tertiary);
+}
+
+/* ── Pulsing Animations ── */
+
+.animate-pulse-slow {
+    animation: pulseScale 2s ease-in-out infinite;
+}
+
+@keyframes pulseScale {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
 }
 
 /* ── Responsive ── */
