@@ -289,6 +289,76 @@
     }
 }
 
+/* ── Bottom Controls ── */
+
+.audio-call-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-8);
+    padding: var(--sp-6) var(--sp-4);
+    width: 100%;
+    max-width: 320px;
+    z-index: 5;
+}
+
+.audio-call-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-full);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition-default);
+    position: relative;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.audio-call-btn:active {
+    transform: scale(0.9);
+}
+
+.audio-call-btn--mute.is-muted {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.audio-call-btn--speaker.is-active {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.audio-call-btn--end {
+    width: 64px;
+    height: 64px;
+    background: var(--accent-red);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(237, 73, 86, 0.4);
+    flex-direction: row;
+    /* Keep icon only in the bubble */
+}
+
+.audio-call-btn--end:hover {
+    background: #d6384a;
+}
+
+.audio-call-btn-label {
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    font-weight: var(--fw-medium);
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 480px) {
