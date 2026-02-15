@@ -91,6 +91,14 @@ export interface CallSignal {
     };
 }
 
+export interface CallState {
+    status: 'ringing' | 'active';
+    callerId: string;
+    callerName: string;
+    callType: 'audio' | 'video';
+    startTime: number;
+}
+
 export interface PresenceEntry {
     displayName: string;
     timestamp: number;

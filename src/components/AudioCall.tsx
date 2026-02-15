@@ -10,6 +10,7 @@ interface Props {
     remotePeers: Record<string, Peer>;
     onToggleAudio: () => void;
     onEndCall: () => void;
+    startTime?: number;
 }
 
 function formatTime(seconds: number): string {
@@ -54,12 +55,13 @@ export function AudioCall({
     remotePeers,
     onToggleAudio,
     onEndCall,
+    startTime,
 }: Props) {
     const [elapsed, setElapsed] = useState(0);
     const [speakerOn, setSpeakerOn] = useState(false);
     const [interactionRequired, setInteractionRequired] = useState(false);
     const [resumeTrigger, setResumeTrigger] = useState(0);
-    const startTimeRef = useRef(Date.now());
+    const startTimeRef = useRef(startTime || Date.now());
 
     // Call timer — only starts when call is answered
     useEffect(() => {
@@ -67,12 +69,18 @@ export function AudioCall({
             setElapsed(0);
             return;
         }
-        startTimeRef.current = Date.now();
+
+        // Use prop if available, otherwise default to now
+        startTimeRef.current = startTime || Date.now();
+
+        // Initial update
+        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+
         const interval = setInterval(() => {
             setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
         }, 1000);
         return () => clearInterval(interval);
-    }, [isCallAnswered]);
+    }, [isCallAnswered, startTime]);
 
     // Check for autoplay block using AudioContext (reliable detection)
     useEffect(() => {

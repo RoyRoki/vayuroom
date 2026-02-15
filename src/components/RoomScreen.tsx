@@ -21,6 +21,7 @@ interface Props {
     onDeclineCall: () => void;
     onLeave: () => void;
     connectionQuality: import('../types').ConnectionQuality;
+    callStartTime?: number;
 }
 
 export function RoomScreen({
@@ -35,6 +36,7 @@ export function RoomScreen({
     onDeclineCall,
     onLeave,
     connectionQuality,
+    callStartTime,
 }: Props) {
     const messages = useRoomStore((s) => s.messages);
     const remotePeers = useRoomStore((s) => s.remotePeers);
@@ -71,6 +73,7 @@ export function RoomScreen({
                     onToggleAudio={onToggleAudio}
                     onEndCall={onToggleCall}
                     isCallAnswered={isCallAnswered}
+                    startTime={callStartTime}
                 />
             )}
 

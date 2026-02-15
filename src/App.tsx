@@ -96,10 +96,11 @@ export default function App() {
         });
     }, [setIncomingCall]);
 
-    const handleCallAnswered = useCallback(async (_signal: CallSignal) => {
+    const handleCallAnswered = useCallback(async (signal: CallSignal) => {
         // Someone accepted our call — now the call is truly connected
         setIsCallAnswered(true);
-        callStartTimeRef.current = Date.now();
+        // Use the timestamp from the signal (which might be from persistent state for late joiners)
+        callStartTimeRef.current = signal.timestamp || Date.now();
         if (!isCallActive) {
             try {
                 const stream = await media.startMedia(false);
@@ -362,6 +363,7 @@ export default function App() {
                     onAcceptCall={handleAcceptCall}
                     onDeclineCall={handleDeclineCall}
                     onLeave={handleLeave}
+                    callStartTime={callStartTimeRef.current ?? undefined}
                 />
             )}
         </>
