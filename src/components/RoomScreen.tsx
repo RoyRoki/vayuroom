@@ -2,6 +2,7 @@ import { RoomHeader } from './RoomHeader';
 import { MessageList } from './MessageList';
 import { ChatInput } from './ChatInput';
 import { AudioCall } from './AudioCall';
+import { VideoCall } from './VideoCall';
 import { IncomingCall } from './IncomingCall';
 import { useRoomStore } from '../store/useRoomStore';
 import './RoomScreen.css';
@@ -22,21 +23,26 @@ interface Props {
     onLeave: () => void;
     connectionQuality: import('../types').ConnectionQuality;
     callStartTime?: number;
+    activeCallType: 'audio' | 'video' | null;
 }
 
 export function RoomScreen({
     localPeerId,
+    localStream,
     isAudioEnabled,
+    isVideoEnabled,
     isCallActive,
     isCallAnswered,
     onSendMessage,
     onToggleAudio,
+    onToggleVideo,
     onToggleCall,
     onAcceptCall,
     onDeclineCall,
     onLeave,
     connectionQuality,
     callStartTime,
+    activeCallType,
 }: Props) {
     const messages = useRoomStore((s) => s.messages);
     const remotePeers = useRoomStore((s) => s.remotePeers);
@@ -64,14 +70,28 @@ export function RoomScreen({
                 disabled={connectionStatus !== 'connected' && connectionStatus !== 'joining'}
             />
 
-            {/* Instagram-style audio call overlay */}
-            {isCallActive && (
+            {/* Call Overlay */}
+            {isCallActive && activeCallType === 'audio' && (
                 <AudioCall
                     peerCount={peerCount}
                     isAudioEnabled={isAudioEnabled}
                     remotePeers={remotePeers}
                     onToggleAudio={onToggleAudio}
-                    onEndCall={onToggleCall}
+                    onEndCall={() => onToggleCall(false)}
+                    isCallAnswered={isCallAnswered}
+                    startTime={callStartTime}
+                />
+            )}
+
+            {isCallActive && activeCallType === 'video' && (
+                <VideoCall
+                    localStream={localStream}
+                    isAudioEnabled={isAudioEnabled}
+                    isVideoEnabled={isVideoEnabled}
+                    remotePeers={remotePeers}
+                    onToggleAudio={onToggleAudio}
+                    onToggleVideo={onToggleVideo}
+                    onEndCall={() => onToggleCall(false)}
                     isCallAnswered={isCallAnswered}
                     startTime={callStartTime}
                 />

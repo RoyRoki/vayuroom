@@ -18,6 +18,7 @@ export default function App() {
     const [screen, setScreen] = useState<Screen>('join');
     const [isCallActive, setIsCallActive] = useState(false);
     const [isCallAnswered, setIsCallAnswered] = useState(false);
+    const [activeCallType, setActiveCallType] = useState<'audio' | 'video' | null>(null);
     const peerIdRef = useRef(generatePeerId());
     const displayNameRef = useRef(peerIdRef.current);
     const callStartTimeRef = useRef<number | null>(null);
@@ -103,9 +104,11 @@ export default function App() {
         callStartTimeRef.current = signal.timestamp || Date.now();
         if (!isCallActive) {
             try {
-                const stream = await media.startMedia(false);
+                const isVideo = signal.callType === 'video';
+                const stream = await media.startMedia(isVideo);
                 webrtcHook.addTracksToAllPeers(stream);
                 setIsCallActive(true);
+                setActiveCallType(signal.callType);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Could not access media devices';
                 toast.error(msg);
@@ -125,6 +128,7 @@ export default function App() {
             webrtcHook.removeTracksFromAllPeers();
             media.stopMedia();
             setIsCallActive(false);
+            setActiveCallType(null);
             setIsCallAnswered(false);
 
             addCallEventMessage({
@@ -151,6 +155,7 @@ export default function App() {
             webrtcHook.removeTracksFromAllPeers();
             media.stopMedia();
             setIsCallActive(false);
+            setActiveCallType(null);
             setIsCallAnswered(false);
 
             addCallEventMessage({
@@ -207,10 +212,8 @@ export default function App() {
 
     /* ── Leave Room ── */
     const handleLeave = useCallback(async () => {
-        if (isCallActive) {
-            callSignaling.endCall();
-        }
         setIsCallActive(false);
+        setActiveCallType(null);
         setIsCallAnswered(false);
         setIncomingCall(null);
         callStartTimeRef.current = null;
@@ -261,6 +264,7 @@ export default function App() {
             webrtcHook.removeTracksFromAllPeers();
             media.stopMedia();
             setIsCallActive(false);
+            setActiveCallType(null);
             setIsCallAnswered(false);
 
             addCallEventMessage({
@@ -280,6 +284,7 @@ export default function App() {
                 webrtcHook.addTracksToAllPeers(stream);
                 callerNameRef.current = displayNameRef.current;
                 setIsCallActive(true);
+                setActiveCallType(startWithVideo ? 'video' : 'audio');
                 // Don't set callStartTimeRef here — timer starts when someone answers
 
                 // Notify other peers
@@ -298,12 +303,14 @@ export default function App() {
     const handleAcceptCall = useCallback(async () => {
         try {
             const incomingCall = useRoomStore.getState().incomingCall;
+            const isVideo = incomingCall?.callType === 'video';
             callerNameRef.current = incomingCall?.callerName || '';
 
-            const stream = await media.startMedia(false);
+            const stream = await media.startMedia(isVideo);
             webrtcHook.addTracksToAllPeers(stream);
             callStartTimeRef.current = Date.now();
             setIsCallActive(true);
+            setActiveCallType(incomingCall?.callType || 'audio');
             setIsCallAnswered(true);
             setIncomingCall(null);
 
@@ -355,6 +362,7 @@ export default function App() {
                     isVideoEnabled={media.isVideoEnabled}
                     isCallActive={isCallActive}
                     isCallAnswered={isCallAnswered}
+                    activeCallType={activeCallType}
                     connectionQuality={connectionQuality}
                     onSendMessage={chatHook.sendMessage}
                     onToggleAudio={media.toggleAudio}

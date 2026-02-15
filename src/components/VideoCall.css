@@ -1,79 +1,233 @@
-.video-call {
-    position: relative;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
+.video-call-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 100;
     display: flex;
-    gap: var(--sp-2);
-    padding: var(--sp-2);
-    min-height: 180px;
-    max-height: 40vh;
+    flex-direction: column;
     overflow: hidden;
+    color: white;
 }
 
-.video-remote {
-    position: relative;
-    flex: 1;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--bg-tertiary);
-}
-
+/* ── Generic Video Element Styling ── */
 .video-el {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    background: #1a1a1a;
+    transform: scaleX(-1);
+    /* Mirror effect */
+}
+
+/* ── Layouts ── */
+/* 1:1 Call */
+.video-grid-1 {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* Group Call (Grid) */
+.video-grid {
+    flex: 1;
+    display: grid;
+    padding: 2px;
+    gap: 2px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    align-content: center;
+}
+
+.video-cell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    background: #222;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.video-cell-name {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Local PiP (for 1:1 calls) ── */
+.video-pip {
+    position: absolute;
+    top: 60px;
+    /* Below header */
+    right: 16px;
+    width: 100px;
+    height: 150px;
+    background: #333;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-pip video {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.video-hidden {
-    display: none;
+/* ── Top Bar (matches AudioCall) ── */
+.video-call-top {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
 }
 
-.video-label {
+.video-call-label {
+    font-size: 16px;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.video-call-encrypt {
+    font-size: 11px;
+    opacity: 0.6;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.video-call-timer {
+    font-size: 13px;
+    opacity: 0.8;
+    margin-top: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* ── Controls (matches AudioCall) ── */
+.video-call-controls {
     position: absolute;
-    bottom: var(--sp-2);
-    left: var(--sp-2);
-    font-size: var(--fs-xs);
-    font-weight: var(--fw-medium);
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+    z-index: 20;
+    padding-bottom: 20px;
+}
+
+.video-call-btn {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.15);
     color: white;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 2px var(--sp-2);
-    border-radius: var(--radius-full);
+    backdrop-filter: blur(8px);
+    position: relative;
 }
 
-.video-local-pip {
+.video-call-btn:active {
+    transform: scale(0.95);
+}
+
+.video-call-btn--end {
+    background: #FF3B30;
+    width: 64px;
+    height: 64px;
+}
+
+.video-call-btn.is-active {
+    /* e.g. Muted or Video Off */
+    background: white;
+    color: black;
+}
+
+.video-call-btn-icon-off {
+    position: relative;
+}
+
+.video-call-btn-icon-off::after {
+    content: '';
     position: absolute;
-    bottom: var(--sp-3);
-    right: var(--sp-3);
-    width: 100px;
-    height: 140px;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    border: 2px solid var(--border);
-    background: var(--bg-tertiary);
-    z-index: 2;
+    top: 50%;
+    left: 50%;
+    width: 120%;
+    height: 2px;
+    background: currentColor;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    border-radius: 2px;
 }
 
-.video-local-pip .video-el {
-    transform: scaleX(-1);
-    /* mirror */
-}
-
-@media (max-width: 480px) {
-    .video-local-pip {
-        width: 80px;
-        height: 112px;
-        bottom: var(--sp-2);
-        right: var(--sp-2);
-    }
-}
-
-.video-avatar-small {
+/* ── Placeholder for Video Off ── */
+.video-off-placeholder {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--fs-xs);
-    color: var(--text-secondary);
-    background: var(--bg-tertiary);
+    background: #1a1a1a;
+    color: #555;
+}
+
+/* ── Waiting / Calling State ── */
+.video-call-waiting {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding-bottom: 100px;
+}
+
+.video-call-waiting-avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    border: 1px solid #444;
+}
+
+.video-call-waiting-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.video-call-waiting-status {
+    font-size: 14px;
+    opacity: 0.7;
 }
