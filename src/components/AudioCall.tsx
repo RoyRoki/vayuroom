@@ -6,6 +6,7 @@ import './AudioCall.css';
 interface Props {
     peerCount: number;
     isAudioEnabled: boolean;
+    isCallAnswered: boolean;
     remotePeers: Record<string, Peer>;
     onToggleAudio: () => void;
     onEndCall: () => void;
@@ -22,21 +23,26 @@ function RemoteAudio({ peer, resumeTrigger }: { peer: Peer, resumeTrigger: numbe
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
-        if (audioRef.current && peer.stream) {
-            audioRef.current.srcObject = peer.stream;
-            audioRef.current.play().catch(() => {
-                console.warn('[AudioCall] Autoplay blocked for', peer.id);
-            });
+        const el = audioRef.current;
+        if (!el || !peer.stream) return;
+
+        // Only reassign if the stream actually changed
+        if (el.srcObject !== peer.stream) {
+            el.srcObject = peer.stream;
         }
+        el.volume = 1.0;
+        el.play().catch((err) => {
+            console.warn('[AudioCall] Autoplay blocked for', peer.id, err.message);
+        });
     }, [peer.stream, peer.id, resumeTrigger]);
 
-    if (!peer.stream) return null;
-
+    // Always render the element so srcObject can be set when stream arrives
     return (
         <audio
             ref={audioRef}
             autoPlay
             playsInline
+            style={{ display: 'none' }}
         />
     );
 }
@@ -44,6 +50,7 @@ function RemoteAudio({ peer, resumeTrigger }: { peer: Peer, resumeTrigger: numbe
 export function AudioCall({
     peerCount,
     isAudioEnabled,
+    isCallAnswered,
     remotePeers,
     onToggleAudio,
     onEndCall,
@@ -54,23 +61,30 @@ export function AudioCall({
     const [resumeTrigger, setResumeTrigger] = useState(0);
     const startTimeRef = useRef(Date.now());
 
-    // Call timer
+    // Call timer — only starts when call is answered
     useEffect(() => {
+        if (!isCallAnswered) {
+            setElapsed(0);
+            return;
+        }
         startTimeRef.current = Date.now();
         const interval = setInterval(() => {
             setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
         }, 1000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isCallAnswered]);
 
-    // Check for autoplay block
+    // Check for autoplay block using AudioContext (reliable detection)
     useEffect(() => {
         const checkAutoplay = async () => {
             try {
-                const testAudio = new Audio();
-                await testAudio.play();
-            } catch (e) {
-                console.warn('[AudioCall] Interaction required for audio');
+                const ctx = new AudioContext();
+                if (ctx.state === 'suspended') {
+                    console.warn('[AudioCall] AudioContext suspended — interaction required');
+                    setInteractionRequired(true);
+                }
+                ctx.close();
+            } catch {
                 setInteractionRequired(true);
             }
         };
@@ -82,7 +96,7 @@ export function AudioCall({
         setResumeTrigger(v => v + 1);
     };
 
-    const isConnected = peerCount > 1;
+    const isConnected = isCallAnswered;
     const remoteEntries = Object.entries(remotePeers);
     const remoteName = remoteEntries[0]?.[1]?.displayName || 'Audio Call';
 

@@ -1,0 +1,83 @@
+/* ── Call Event Bubble (Instagram-style in Chat) ── */
+
+.call-event-bubble {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    margin: var(--sp-2) 0;
+    background: var(--bg-elevated);
+    border-radius: var(--bubble-radius, 16px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    max-width: 85%;
+    animation: callEventFadeIn 0.3s ease forwards;
+}
+
+@keyframes callEventFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.call-event-icon-wrap {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.call-event-bubble--completed .call-event-icon-wrap {
+    background: rgba(0, 200, 83, 0.15);
+}
+
+.call-event-bubble--missed .call-event-icon-wrap {
+    background: rgba(237, 73, 86, 0.15);
+}
+
+.call-event-bubble--declined .call-event-icon-wrap {
+    background: rgba(255, 171, 64, 0.15);
+}
+
+.call-event-icon--completed {
+    color: #00C853;
+}
+
+.call-event-icon--missed {
+    color: var(--accent-red, #ED4956);
+}
+
+.call-event-icon--declined {
+    color: #FFAB40;
+}
+
+.call-event-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.call-event-title {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.call-event-detail {
+    font-size: var(--fs-xs);
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+}

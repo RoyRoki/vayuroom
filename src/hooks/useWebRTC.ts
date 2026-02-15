@@ -60,8 +60,33 @@ export function useWebRTC({
     /* ── Create PeerConnection ── */
     const createConnection = useCallback(
         (remotePeerId: string, remoteDisplayName: string) => {
+            // If connection already exists for this peer, return it
+            const existing = connections.current.get(remotePeerId);
+            if (existing) {
+                if (existing.pc.connectionState !== 'closed' && existing.pc.connectionState !== 'failed') {
+                    console.log(`[WebRTC] Reusing existing connection for ${remotePeerId}`);
+                    return existing;
+                }
+                // Connection is dead — clean it up
+                existing.dc?.close();
+                existing.pc.close();
+                connections.current.delete(remotePeerId);
+            }
+
+            // Clean up any dead connections before checking capacity
+            for (const [id, entry] of connections.current.entries()) {
+                const state = entry.pc.connectionState;
+                if (state === 'closed' || state === 'failed' || state === 'disconnected') {
+                    console.log(`[WebRTC] Cleaning dead connection for ${id} (state: ${state})`);
+                    entry.dc?.close();
+                    entry.pc.close();
+                    connections.current.delete(id);
+                    removeRemotePeer(id);
+                }
+            }
+
             if (connections.current.size >= MAX_PEERS - 1) {
-                console.warn(`[WebRTC] Room full — max ${MAX_PEERS} peers`);
+                console.warn(`[WebRTC] Room full — max ${MAX_PEERS} peers (connections: ${connections.current.size})`);
                 return null;
             }
 
@@ -97,10 +122,13 @@ export function useWebRTC({
 
             // Remote tracks
             pc.ontrack = (e) => {
-                const [stream] = e.streams;
-                if (stream) {
-                    updatePeerStream(remotePeerId, stream);
+                console.log(`[WebRTC] ontrack from ${remotePeerId}:`, e.track.kind, 'streams:', e.streams.length);
+                const firstStream = e.streams?.[0];
+                const stream = firstStream ?? new MediaStream([e.track]);
+                if (!firstStream) {
+                    console.warn(`[WebRTC] No stream in ontrack, created new MediaStream for ${remotePeerId}`);
                 }
+                updatePeerStream(remotePeerId, stream);
             };
 
             // Connection state changes
@@ -247,39 +275,71 @@ export function useWebRTC({
 
     /* ── Add tracks to all existing peers (for mid-session call start) ── */
     const addTracksToAllPeers = useCallback(
-        (stream: MediaStream) => {
-            connections.current.forEach((entry) => {
+        async (stream: MediaStream) => {
+            for (const [remotePeerId, entry] of connections.current.entries()) {
                 const pc = entry.pc;
-                const existingSenders = pc.getSenders();
 
                 stream.getTracks().forEach((track) => {
-                    // Check if a sender for this track kind already exists
-                    const existingSender = existingSenders.find(
+                    // 1. Check for existing sender with a track of the same kind
+                    const senderWithTrack = pc.getSenders().find(
                         (s) => s.track?.kind === track.kind
                     );
 
-                    if (existingSender) {
-                        // Replace the track on the existing sender (no renegotiation needed)
-                        existingSender.replaceTrack(track);
-                    } else {
-                        // Add new track — triggers onnegotiationneeded automatically
-                        pc.addTrack(track, stream);
+                    if (senderWithTrack) {
+                        senderWithTrack.replaceTrack(track);
+                        console.log(`[WebRTC] Replaced ${track.kind} track for ${remotePeerId}`);
+                        return;
                     }
+
+                    // 2. Check for a transceiver with no sender track (created by remote offer)
+                    const transceiver = pc.getTransceivers().find(
+                        (t) => !t.sender.track && t.receiver.track?.kind === track.kind
+                    );
+
+                    if (transceiver) {
+                        transceiver.sender.replaceTrack(track);
+                        if (transceiver.direction === 'recvonly') {
+                            transceiver.direction = 'sendrecv';
+                        }
+                        console.log(`[WebRTC] Reused transceiver for ${track.kind} for ${remotePeerId}`);
+                        return;
+                    }
+
+                    // 3. No match — add brand new track+stream (triggers onnegotiationneeded)
+                    pc.addTrack(track, stream);
+                    console.log(`[WebRTC] Added new ${track.kind} track for ${remotePeerId}`);
                 });
-            });
+
+                // Force renegotiation so the remote side knows about our tracks
+                try {
+                    entry.makingOffer = true;
+                    const offer = await pc.createOffer();
+                    await pc.setLocalDescription(offer);
+                    await sendSignal({
+                        type: 'offer',
+                        senderId: peerId,
+                        targetId: remotePeerId,
+                        payload: pc.localDescription!.toJSON(),
+                    });
+                    console.log(`[WebRTC] Renegotiated with ${remotePeerId} after adding tracks`);
+                } catch (err) {
+                    console.error('[WebRTC] Renegotiation failed:', err);
+                } finally {
+                    entry.makingOffer = false;
+                }
+            }
             console.log('[WebRTC] Added tracks to all peers');
         },
-        []
+        [peerId, sendSignal]
     );
 
     /* ── Remove media tracks from all peers (for ending call) ── */
     const removeTracksFromAllPeers = useCallback(() => {
         connections.current.forEach((entry) => {
             const pc = entry.pc;
-            const senders = pc.getSenders();
-            senders.forEach((sender) => {
+            pc.getSenders().forEach((sender) => {
                 if (sender.track) {
-                    pc.removeTrack(sender);
+                    sender.replaceTrack(null);
                 }
             });
         });

@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { MessageBubble } from './MessageBubble';
+import { CallEventBubble } from './CallEventBubble';
 import { MessageCircle } from 'lucide-react';
 import type { Message } from '../types';
 import './MessageList.css';
@@ -33,6 +34,12 @@ export function MessageList({ messages, localPeerId }: Props) {
                     <div key={msg.id} className="system-message">
                         {msg.text}
                     </div>
+                ) : msg.type === 'call' && msg.callEvent ? (
+                    <CallEventBubble
+                        key={msg.id}
+                        callEvent={msg.callEvent}
+                        timestamp={msg.timestamp}
+                    />
                 ) : (
                     <MessageBubble
                         key={msg.id}
@@ -45,3 +52,4 @@ export function MessageList({ messages, localPeerId }: Props) {
         </div>
     );
 }
+

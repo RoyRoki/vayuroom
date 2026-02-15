@@ -9,7 +9,15 @@ export interface Peer {
 }
 
 /* ── Message ── */
-export type MessageType = 'user' | 'system';
+export type MessageType = 'user' | 'system' | 'call';
+
+export interface CallEventData {
+    callerName: string;
+    callStatus: 'completed' | 'missed' | 'declined';
+    callStartTime?: number;
+    callEndTime?: number;
+    callDuration?: number; // seconds
+}
 
 export interface Message {
     id: string;
@@ -20,12 +28,21 @@ export interface Message {
     timestamp: number;
     encrypted?: string;
     iv?: string;
+    callEvent?: CallEventData;
 }
 
 /* ── Room ── */
 export type ConnectionStatus = 'idle' | 'joining' | 'connected' | 'reconnecting' | 'failed';
 export type ConnectionQuality = 'good' | 'fair' | 'poor' | 'unknown';
 export type CallStatus = 'none' | 'active' | 'ended';
+
+/* ── Incoming Call ── */
+export interface IncomingCallInfo {
+    callerId: string;
+    callerName: string;
+    callType: 'audio' | 'video';
+    timestamp: number;
+}
 
 export interface RoomState {
     /* identity */
@@ -57,6 +74,23 @@ export interface Signal {
     politeness: number;
 }
 
+/* ── Call Signaling ── */
+export type CallSignalType = 'call-start' | 'call-answer' | 'call-reject' | 'call-end';
+
+export interface CallSignal {
+    id: string;
+    type: CallSignalType;
+    senderId: string;
+    senderName: string;
+    callType: 'audio' | 'video';
+    timestamp: number;
+    payload?: {
+        duration?: number;
+        startTime?: number;
+        endTime?: number;
+    };
+}
+
 export interface PresenceEntry {
     displayName: string;
     timestamp: number;
@@ -83,7 +117,7 @@ export interface MediaControls {
 /* ── Constants ── */
 export const MAX_PEERS = 3;
 export const HEARTBEAT_INTERVAL = 15_000;   // 15s
-export const PRESENCE_STALE_MS = 60 * 60 * 1000; // 1 hour (handling clock skew)
+export const PRESENCE_STALE_MS = 45_000;         // 45s (3 missed heartbeats = stale)
 export const SIGNAL_TTL_MS = 5 * 60 * 1000;    // 5 mins
 export const ICE_RESTART_MAX = 3;
 export const DATA_CHANNEL_LABEL = 'vayuroom-chat';

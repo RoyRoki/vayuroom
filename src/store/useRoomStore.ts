@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Message, Peer, ConnectionStatus, CallStatus } from '../types';
+import type { Message, Peer, ConnectionStatus, CallStatus, IncomingCallInfo, CallEventData } from '../types';
 
 interface RoomStore {
     /* ── State ── */
@@ -10,6 +10,11 @@ interface RoomStore {
     remotePeers: Record<string, Peer>;
     peerCount: number;
 
+    /* ── Call State ── */
+    incomingCall: IncomingCallInfo | null;
+    callStartTime: number | null;
+    callEndTime: number | null;
+
     /* ── Actions ── */
     setRoomHash: (hash: string) => void;
     setConnectionStatus: (status: ConnectionStatus) => void;
@@ -17,7 +22,12 @@ interface RoomStore {
 
     addMessage: (msg: Message) => void;
     addSystemMessage: (text: string) => void;
+    addCallEventMessage: (callEvent: CallEventData) => void;
     clearMessages: () => void;
+
+    setIncomingCall: (info: IncomingCallInfo | null) => void;
+    setCallStartTime: (t: number | null) => void;
+    setCallEndTime: (t: number | null) => void;
 
     addRemotePeer: (id: string, displayName: string) => void;
     removeRemotePeer: (id: string) => void;
@@ -34,6 +44,9 @@ const initialState = {
     messages: [] as Message[],
     remotePeers: {} as Record<string, Peer>,
     peerCount: 0,
+    incomingCall: null as IncomingCallInfo | null,
+    callStartTime: null as number | null,
+    callEndTime: null as number | null,
 };
 
 export const useRoomStore = create<RoomStore>((set) => ({
@@ -57,20 +70,36 @@ export const useRoomStore = create<RoomStore>((set) => ({
                 ...s.messages,
                 {
                     id: crypto.randomUUID(),
-                    type: 'system',
+                    type: 'system' as const,
                     text,
                     timestamp: Date.now(),
                 },
             ],
         })),
 
+    addCallEventMessage: (callEvent) =>
+        set((s) => ({
+            messages: [
+                ...s.messages,
+                {
+                    id: crypto.randomUUID(),
+                    type: 'call' as const,
+                    text: '',
+                    timestamp: Date.now(),
+                    callEvent,
+                },
+            ],
+        })),
+
     clearMessages: () => set({ messages: [] }),
+
+    setIncomingCall: (info) => set({ incomingCall: info }),
+    setCallStartTime: (t) => set({ callStartTime: t }),
+    setCallEndTime: (t) => set({ callEndTime: t }),
 
     addRemotePeer: (id, displayName) =>
         set((s) => {
             const existing = s.remotePeers[id];
-            // If peer exists, just update display name (or do nothing if we want to preserve state)
-            // But we should probably preserve connectionState and streams if they exist.
             const peer: Peer = existing ? {
                 ...existing,
                 displayName,

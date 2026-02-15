@@ -3,6 +3,7 @@ import {
     ref,
     push,
     set,
+    get,
     remove,
     onChildAdded,
     onChildRemoved,
@@ -10,7 +11,7 @@ import {
 } from 'firebase/database';
 import { db } from '../lib/firebase';
 import type { Signal, PresenceEntry } from '../types';
-import { HEARTBEAT_INTERVAL, PRESENCE_STALE_MS } from '../types';
+import { HEARTBEAT_INTERVAL, PRESENCE_STALE_MS, MAX_PEERS } from '../types';
 import { now } from '../lib/utils';
 
 interface UseSignalingProps {
@@ -31,7 +32,9 @@ export function useSignaling({
     onPeerLeave,
 }: UseSignalingProps) {
     const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const staleCleanupRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const joinOrderRef = useRef(0);
+    const activeRoomRef = useRef('');
 
     /* ── Presence ── */
     const joinRoom = useCallback(async (overrideRoomHash?: string) => {
@@ -41,21 +44,33 @@ export function useSignaling({
             return;
         }
 
+        // Clean stale peers BEFORE checking capacity
+        await cleanStalePeers(targetHash);
+
+        // Check room capacity after cleaning
+        const presencePath = ref(db, `rooms/${targetHash}/presence`);
+        const snapshot = await get(presencePath);
+        const currentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+        if (currentCount >= MAX_PEERS) {
+            throw new Error('Room is full');
+        }
+
         const presenceRef = ref(db, `rooms/${targetHash}/presence/${peerId}`);
         const presenceData: PresenceEntry = {
             displayName,
             timestamp: now(),
-            order: now(), // join order = timestamp (lower = more impolite)
+            order: now(),
         };
 
         // Set presence
         await set(presenceRef, presenceData);
         joinOrderRef.current = presenceData.order;
+        activeRoomRef.current = targetHash;
 
-        // Auto-remove on disconnect
+        // Auto-remove on disconnect (Firebase server-side, best-effort)
         onDisconnect(presenceRef).remove();
 
-        // Heartbeat: update timestamp every 15s
+        // Heartbeat: update timestamp every 10s
         heartbeatRef.current = setInterval(async () => {
             try {
                 await set(ref(db, `rooms/${targetHash}/presence/${peerId}/timestamp`), now());
@@ -63,12 +78,46 @@ export function useSignaling({
                 // ignore heartbeat errors
             }
         }, HEARTBEAT_INTERVAL);
+
+        // Stale peer cleanup: scan every 20s and remove dead peers
+        staleCleanupRef.current = setInterval(async () => {
+            await cleanStalePeers(targetHash);
+        }, HEARTBEAT_INTERVAL * 2);
+
     }, [roomHash, peerId, displayName]);
+
+    /** Remove peers whose timestamp is older than PRESENCE_STALE_MS */
+    const cleanStalePeers = async (targetHash: string) => {
+        try {
+            const presencePath = ref(db, `rooms/${targetHash}/presence`);
+            const snapshot = await get(presencePath);
+            if (!snapshot.exists()) return;
+
+            const peers = snapshot.val() as Record<string, PresenceEntry>;
+            const currentTime = now();
+
+            for (const [id, entry] of Object.entries(peers)) {
+                if (id === peerId) continue; // Don't clean ourselves
+                const age = currentTime - entry.timestamp;
+                if (age > PRESENCE_STALE_MS) {
+                    console.log(`[Signaling] Cleaning stale peer ${id} (age: ${Math.round(age / 1000)}s)`);
+                    await remove(ref(db, `rooms/${targetHash}/presence/${id}`));
+                    // onChildRemoved will fire and trigger onPeerLeave
+                }
+            }
+        } catch (err) {
+            console.warn('[Signaling] Stale cleanup failed:', err);
+        }
+    };
 
     const leaveRoom = useCallback(async () => {
         if (heartbeatRef.current) {
             clearInterval(heartbeatRef.current);
             heartbeatRef.current = null;
+        }
+        if (staleCleanupRef.current) {
+            clearInterval(staleCleanupRef.current);
+            staleCleanupRef.current = null;
         }
         try {
             await remove(ref(db, `rooms/${roomHash}/presence/${peerId}`));
@@ -76,7 +125,33 @@ export function useSignaling({
         } catch {
             // best-effort cleanup
         }
+        activeRoomRef.current = '';
     }, [roomHash, peerId]);
+
+    /* ── beforeunload / pagehide: best-effort cleanup on tab close ── */
+    useEffect(() => {
+        const cleanup = () => {
+            const hash = activeRoomRef.current;
+            if (!hash) return;
+            // Use sendBeacon for reliable tab-close cleanup
+            // But Firebase doesn't support beacon, so use synchronous remove
+            try {
+                // Best-effort: remove presence. Firebase onDisconnect should also handle this.
+                const presenceRef = ref(db, `rooms/${hash}/presence/${peerId}`);
+                remove(presenceRef).catch(() => { });
+            } catch {
+                // ignore
+            }
+        };
+
+        window.addEventListener('beforeunload', cleanup);
+        window.addEventListener('pagehide', cleanup);
+
+        return () => {
+            window.removeEventListener('beforeunload', cleanup);
+            window.removeEventListener('pagehide', cleanup);
+        };
+    }, [peerId]);
 
     /* ── Send Signal ── */
     const sendSignal = useCallback(
@@ -95,7 +170,6 @@ export function useSignaling({
     );
 
     /* ── Listen for peer presence + signals ── */
-    /* ── Refs for callbacks to avoid re-subscriptions ── */
     const onSignalRef = useRef(onSignal);
     const onPeerJoinRef = useRef(onPeerJoin);
     const onPeerLeaveRef = useRef(onPeerLeave);
@@ -106,7 +180,6 @@ export function useSignaling({
         onPeerLeaveRef.current = onPeerLeave;
     }, [onSignal, onPeerJoin, onPeerLeave]);
 
-    /* ── Listen for peer presence + signals ── */
     useEffect(() => {
         if (!roomHash || !peerId) return;
 
@@ -142,13 +215,11 @@ export function useSignaling({
 
             // Ignore expired signals
             if (now() - signal.timestamp > 60_000) {
-                // Clean up stale signal
                 remove(snap.ref).catch(() => { });
                 return;
             }
 
             onSignalRef.current(signal);
-            // Remove consumed signal
             remove(snap.ref).catch(() => { });
         });
 
@@ -157,7 +228,7 @@ export function useSignaling({
             unsubLeave();
             unsubSignals();
         };
-    }, [roomHash, peerId]); // Removed callbacks from dependencies
+    }, [roomHash, peerId]);
 
     return {
         joinRoom,
@@ -166,3 +237,4 @@ export function useSignaling({
         joinOrder: joinOrderRef.current,
     };
 }
+
