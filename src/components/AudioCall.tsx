@@ -18,18 +18,17 @@ function formatTime(seconds: number): string {
 }
 
 /** Hidden audio element that plays a remote peer's stream */
-function RemoteAudio({ peer }: { peer: Peer }) {
+function RemoteAudio({ peer, resumeTrigger }: { peer: Peer, resumeTrigger: number }) {
     const audioRef = useRef<HTMLAudioElement>(null);
 
     useEffect(() => {
         if (audioRef.current && peer.stream) {
             audioRef.current.srcObject = peer.stream;
-            // Autoplay might be blocked — try to resume
             audioRef.current.play().catch(() => {
                 console.warn('[AudioCall] Autoplay blocked for', peer.id);
             });
         }
-    }, [peer.stream, peer.id]);
+    }, [peer.stream, peer.id, resumeTrigger]);
 
     if (!peer.stream) return null;
 
@@ -51,6 +50,8 @@ export function AudioCall({
 }: Props) {
     const [elapsed, setElapsed] = useState(0);
     const [speakerOn, setSpeakerOn] = useState(false);
+    const [interactionRequired, setInteractionRequired] = useState(false);
+    const [resumeTrigger, setResumeTrigger] = useState(0);
     const startTimeRef = useRef(Date.now());
 
     // Call timer
@@ -62,21 +63,46 @@ export function AudioCall({
         return () => clearInterval(interval);
     }, []);
 
-    const isConnected = peerCount > 1;
-    const peerLabel = peerCount > 2
-        ? `Room Call · ${peerCount} people`
-        : peerCount === 2
-            ? 'Connected'
-            : 'Calling...';
+    // Check for autoplay block
+    useEffect(() => {
+        const checkAutoplay = async () => {
+            try {
+                const testAudio = new Audio();
+                await testAudio.play();
+            } catch (e) {
+                console.warn('[AudioCall] Interaction required for audio');
+                setInteractionRequired(true);
+            }
+        };
+        checkAutoplay();
+    }, []);
 
+    const handleResume = () => {
+        setInteractionRequired(false);
+        setResumeTrigger(v => v + 1);
+    };
+
+    const isConnected = peerCount > 1;
     const remoteEntries = Object.entries(remotePeers);
+    const remoteName = remoteEntries[0]?.[1]?.displayName || 'Audio Call';
 
     return (
         <div className="audio-call-overlay">
             {/* Hidden audio elements for each remote peer */}
             {remoteEntries.map(([id, peer]) => (
-                <RemoteAudio key={id} peer={peer} />
+                <RemoteAudio key={id} peer={peer} resumeTrigger={resumeTrigger} />
             ))}
+
+            {/* Interaction Overlay for Autoplay */}
+            {interactionRequired && (
+                <div className="audio-call-interaction" onClick={handleResume}>
+                    <div className="audio-call-interaction-content">
+                        <Volume2 size={48} className="animate-pulse" />
+                        <h2>Click to Join Audio</h2>
+                        <p>Browser requires interaction to play sound</p>
+                    </div>
+                </div>
+            )}
 
             {/* Top */}
             <div className="audio-call-top">
@@ -90,7 +116,7 @@ export function AudioCall({
             {/* Center — Avatar + Info */}
             <div className="audio-call-center">
                 <div className="audio-call-avatar-wrap">
-                    <div className="audio-call-avatar">
+                    <div className={`audio-call-avatar ${isConnected ? 'is-connected' : 'is-calling'}`}>
                         <div className="audio-call-avatar-inner">
                             <User size={48} className="audio-call-avatar-icon" />
                         </div>
@@ -107,17 +133,18 @@ export function AudioCall({
 
                 <div className="audio-call-info">
                     <span className="audio-call-name">
-                        {peerCount > 2
-                            ? 'Group Call'
-                            : (remoteEntries[0]?.[1]?.displayName || 'Audio Call')}
+                        {peerCount > 2 ? 'Group Call' : remoteName}
                     </span>
-                    {isConnected ? (
-                        <span className="audio-call-timer">{formatTime(elapsed)}</span>
+
+                    {!isConnected ? (
+                        <span className="audio-call-status animate-pulse">Calling...</span>
                     ) : (
-                        <span className="audio-call-status">{peerLabel}</span>
-                    )}
-                    {isConnected && peerCount > 2 && (
-                        <span className="audio-call-status">{peerCount} participants</span>
+                        <div className="audio-call-timer-wrap">
+                            <span className="audio-call-timer">{formatTime(elapsed)}</span>
+                            {peerCount > 2 && (
+                                <span className="audio-call-count">· {peerCount} people</span>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -153,3 +180,4 @@ export function AudioCall({
         </div>
     );
 }
+
