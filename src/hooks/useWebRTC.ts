@@ -202,7 +202,22 @@ export function useWebRTC({
                     if (!entry) return;
                 }
 
+                // If connection is already stable, we might be receiving a duplicate offer or a glare.
+                // But if we are polite and they are making an offer, we should accept it (renegotiation).
+                // However, if we just set an answer (makingOffer=false), we might be in stable state.
+
                 const desc = payload as RTCSessionDescriptionInit;
+                if (entry.pc.signalingState !== 'stable' || entry.pc.signalingState === 'stable') {
+                    // Actually, if it is stable, we CAN set remote offer (it triggers renegotiation).
+                    // The error "Failed to set remote answer sdp: Called in wrong state: stable" 
+                    // means we are trying to set an ANSWER when the state is STABLE 
+                    // (which implies we didn't set a local offer, or we already processed an answer).
+
+                    // Wait, the error loop says "setRemoteDescription ... Failed to set remote ANSWER".
+                    // This means we are processing an ANSWER signal.
+                }
+
+                // ... (offer logic continues)
                 await entry.pc.setRemoteDescription(new RTCSessionDescription(desc));
                 const answer = await entry.pc.createAnswer();
                 await entry.pc.setLocalDescription(answer);
@@ -217,6 +232,11 @@ export function useWebRTC({
 
             if (type === 'answer') {
                 if (!entry) return;
+                // Fix: Check if we are actually waiting for an answer
+                if (entry.pc.signalingState === 'stable') {
+                    console.warn('[WebRTC] Ignored answer because connection is already stable');
+                    return;
+                }
                 const desc = payload as RTCSessionDescriptionInit;
                 await entry.pc.setRemoteDescription(new RTCSessionDescription(desc));
                 entry.makingOffer = false;

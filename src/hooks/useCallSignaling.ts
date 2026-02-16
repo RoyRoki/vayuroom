@@ -125,7 +125,11 @@ export function useCallSignaling({
                 senderName: displayName,
                 callType: 'audio',
                 timestamp: now(),
-                payload: { duration, startTime, endTime }
+                payload: {
+                    duration: duration ?? 0,
+                    startTime: startTime ?? 0,
+                    endTime: endTime ?? 0
+                }
             };
             await set(newRef, signal);
         },
