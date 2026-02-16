@@ -6,6 +6,7 @@ interface RoomStore {
     roomHash: string;
     connectionStatus: ConnectionStatus;
     callStatus: CallStatus;
+    roomCallStatus: 'ringing' | 'active' | 'idle';
     messages: Message[];
     remotePeers: Record<string, Peer>;
     peerCount: number;
@@ -19,6 +20,7 @@ interface RoomStore {
     setRoomHash: (hash: string) => void;
     setConnectionStatus: (status: ConnectionStatus) => void;
     setCallStatus: (status: CallStatus) => void;
+    setRoomCallStatus: (status: 'ringing' | 'active' | 'idle') => void;
 
     addMessage: (msg: Message) => void;
     addSystemMessage: (text: string) => void;
@@ -41,6 +43,7 @@ const initialState = {
     roomHash: '',
     connectionStatus: 'idle' as ConnectionStatus,
     callStatus: 'none' as CallStatus,
+    roomCallStatus: 'idle' as 'ringing' | 'active' | 'idle',
     messages: [] as Message[],
     remotePeers: {} as Record<string, Peer>,
     peerCount: 0,
@@ -55,6 +58,7 @@ export const useRoomStore = create<RoomStore>((set) => ({
     setRoomHash: (hash) => set({ roomHash: hash }),
     setConnectionStatus: (status) => set({ connectionStatus: status }),
     setCallStatus: (status) => set({ callStatus: status }),
+    setRoomCallStatus: (status) => set({ roomCallStatus: status }),
 
     addMessage: (msg) =>
         set((s) => {

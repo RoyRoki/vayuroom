@@ -125,7 +125,7 @@ export interface MediaControls {
 /* ── Constants ── */
 export const MAX_PEERS = 3;
 export const HEARTBEAT_INTERVAL = 15_000;   // 15s
-export const PRESENCE_STALE_MS = 45_000;         // 45s (3 missed heartbeats = stale)
+export const PRESENCE_STALE_MS = 60_000;         // 60s (4 missed heartbeats = stale)
 export const SIGNAL_TTL_MS = 5 * 60 * 1000;    // 5 mins
 export const ICE_RESTART_MAX = 3;
 export const DATA_CHANNEL_LABEL = 'vayuroom-chat';

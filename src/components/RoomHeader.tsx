@@ -12,6 +12,7 @@ interface Props {
     onLeave: () => void;
     onToggleCall: (video?: boolean) => void;
     isCallActive: boolean;
+    roomCallStatus: 'ringing' | 'active' | 'idle';
 }
 
 function getStatusType(status: ConnectionStatus, quality: ConnectionQuality): 'online' | 'connecting' | 'offline' | 'fair' | 'poor' {
@@ -25,7 +26,7 @@ function getStatusType(status: ConnectionStatus, quality: ConnectionQuality): 'o
     }
 }
 
-export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onLeave, onToggleCall, isCallActive }: Props) {
+export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onLeave, onToggleCall, isCallActive, roomCallStatus }: Props) {
     return (
         <header className="room-header">
             <div className="room-header-logo">
@@ -45,7 +46,7 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
             </div>
 
             <div className="room-header-actions">
-                {!isCallActive && (
+                {!isCallActive && roomCallStatus === 'idle' && (
                     <>
                         <button
                             className="btn btn-ghost room-call-btn"
@@ -62,6 +63,18 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
                             <Video size={18} />
                         </button>
                     </>
+                )}
+
+                {!isCallActive && roomCallStatus === 'active' && (
+                    <button
+                        className="btn btn-primary room-join-btn"
+                        onClick={() => onToggleCall(false)} // Default to audio join, or maybe video?
+                        title="Join existing call"
+                        style={{ backgroundColor: '#22c55e', color: 'white', gap: '8px' }}
+                    >
+                        <Phone size={18} />
+                        <span>Join Call</span>
+                    </button>
                 )}
 
                 <button className="btn btn-ghost room-leave-btn" onClick={onLeave} title="Leave room">

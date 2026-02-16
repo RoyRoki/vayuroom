@@ -245,7 +245,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--sp-16, 64px);
+    gap: 120px;
     padding: var(--sp-8) var(--sp-4);
     width: 100%;
     max-width: 320px;

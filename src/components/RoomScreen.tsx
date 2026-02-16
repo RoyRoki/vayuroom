@@ -48,6 +48,7 @@ export function RoomScreen({
     const remotePeers = useRoomStore((s) => s.remotePeers);
     const connectionStatus = useRoomStore((s) => s.connectionStatus);
     const incomingCall = useRoomStore((s) => s.incomingCall);
+    const roomCallStatus = useRoomStore((s) => s.roomCallStatus);
 
     // Derive peer count from remote peers + 1 (local user)
     const peerCount = remotePeers ? Object.keys(remotePeers).length + 1 : 1;
@@ -61,6 +62,7 @@ export function RoomScreen({
                 onToggleCall={onToggleCall}
                 isCallActive={isCallActive}
                 connectionQuality={connectionQuality}
+                roomCallStatus={roomCallStatus}
             />
 
             <MessageList messages={messages} localPeerId={localPeerId} />

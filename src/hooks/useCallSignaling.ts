@@ -7,8 +7,10 @@ import {
     onChildAdded,
     onValue,
     get,
+    onDisconnect,
 } from 'firebase/database';
 import { db } from '../lib/firebase';
+import { useRoomStore } from '../store/useRoomStore';
 import type { CallSignal, CallState } from '../types';
 import { now } from '../lib/utils';
 
@@ -44,6 +46,8 @@ export function useCallSignaling({
         onCallEndedRef.current = onCallEnded;
     }, [onIncomingCall, onCallAnswered, onCallRejected, onCallEnded]);
 
+    const setRoomCallStatus = useRoomStore(s => s.setRoomCallStatus);
+
     /* ── Actions ── */
     const startCall = useCallback(
         async (callType: 'audio' | 'video' = 'audio') => {
@@ -57,6 +61,8 @@ export function useCallSignaling({
                 startTime: now(),
             };
             await set(stateRef, state);
+            // If caller disconnects while ringing, remove the call state
+            onDisconnect(stateRef).remove();
         },
         [roomHash, peerId, displayName]
     );
@@ -74,6 +80,9 @@ export function useCallSignaling({
                     status: 'active',
                     startTime: now(), // Update start time to answer time
                 });
+                // Once active, we don't necessarily want to kill it if the *caller* disconnects
+                // (Depends on desired behavior, but usually we want to keep it alive for others)
+                onDisconnect(stateRef).cancel();
             }
         },
         [roomHash]
@@ -136,12 +145,12 @@ export function useCallSignaling({
 
             if (!state) {
                 // Call ended or cleared.
-                // We rely on 'call-end' signal for explicit ending, but this is a fallback
-                // If we are in 'active' state locally, this should ensure we cleanup
-                // But App.tsx doesn't expose 'isCallActive' here.
-                // We'll leave explicit 'call-end' signal to handle the UI/Cleanup.
+                setRoomCallStatus('idle');
                 return;
             }
+
+            // Sync global status
+            setRoomCallStatus(state.status);
 
             // Synthesize signal from state
             const signal: CallSignal = {

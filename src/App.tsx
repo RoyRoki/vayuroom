@@ -9,6 +9,7 @@ import { useMediaDevices } from './hooks/useMediaDevices';
 import { useCallSignaling } from './hooks/useCallSignaling';
 import { useRoomStore } from './store/useRoomStore';
 import { useChat } from './hooks/useChat';
+import { useIdleTimeout } from './hooks/useIdleTimeout';
 import { generatePeerId } from './lib/utils';
 import type { Signal, PresenceEntry, CallSignal } from './types';
 
@@ -36,6 +37,7 @@ export default function App() {
     const addSystemMessage = useRoomStore(s => s.addSystemMessage);
     const setIncomingCall = useRoomStore(s => s.setIncomingCall);
     const addCallEventMessage = useRoomStore(s => s.addCallEventMessage);
+    const roomCallStatus = useRoomStore(s => s.roomCallStatus);
 
     /* ── Signaling callbacks ── */
     const handleSignalCb = useCallback((signal: Signal) => {
@@ -122,9 +124,19 @@ export default function App() {
         }
     }, [isCallActive, media, webrtcHook]);
 
-    const handleCallRejected = useCallback((signal: CallSignal) => {
+    const endCallRef = useRef<((duration?: number, startTime?: number, endTime?: number) => Promise<void>) | null>(null);
+
+    const handleCallRejected = useCallback(async (signal: CallSignal) => {
         // Someone declined our call
         if (isCallActive) {
+            // If we are the caller, we need to clean up the persistent state "ringing"
+            // so the room returns to "idle" and buttons reappear.
+            // Since the current logic stops the call immediately on ANY rejection,
+            // we should also clear the backend state.
+            if (endCallRef.current) {
+                await endCallRef.current();
+            }
+
             webrtcHook.removeTracksFromAllPeers();
             media.stopMedia();
             setIsCallActive(false);
@@ -181,6 +193,11 @@ export default function App() {
         onCallEnded: handleCallEnded,
     });
 
+    // Break circular dependency
+    useEffect(() => {
+        endCallRef.current = callSignaling.endCall;
+    }, [callSignaling.endCall]);
+
     /* ── Join Room ── */
     const handleJoin = useCallback(async (passphrase: string) => {
         const result = await derive(passphrase);
@@ -212,6 +229,15 @@ export default function App() {
 
     /* ── Leave Room ── */
     const handleLeave = useCallback(async () => {
+        // Last Man Standing Check: If I'm the last one and there's a call state, clear it
+        const currentPeerCount = useRoomStore.getState().peerCount;
+        const currentRoomCallStatus = useRoomStore.getState().roomCallStatus;
+
+        if (currentPeerCount <= 1 && currentRoomCallStatus !== 'idle') {
+            // Force clear the call state
+            await callSignaling.endCall();
+        }
+
         setIsCallActive(false);
         setActiveCallType(null);
         setIsCallAnswered(false);
@@ -230,6 +256,8 @@ export default function App() {
     }, [isCallActive, callSignaling, media, webrtcHook, signaling, resetStore, resetCrypto, setIncomingCall]);
 
     /* ── Duplicate Tab Detection ── */
+    useIdleTimeout(handleLeave);
+
     useEffect(() => {
         const SESSION_KEY = 'vayuroom_session_id';
         const mySessionId = crypto.randomUUID();
@@ -279,6 +307,22 @@ export default function App() {
             callerNameRef.current = '';
         } else {
             try {
+                // If call is already active in room, we join it (Split Brain Fix)
+                if (roomCallStatus === 'active') {
+                    const stream = await media.startMedia(startWithVideo);
+                    webrtcHook.addTracksToAllPeers(stream);
+                    setIsCallActive(true);
+                    setActiveCallType(startWithVideo ? 'video' : 'audio');
+                    // We don't call startCall or answerCall. 
+                    // We just join the media. Call state is already active.
+                    // We assume startTime is already set by the original caller/answerer.
+                    // (Optionally fetch it from firebase if we want accurate timer for late joiner, 
+                    // but App.tsx currently relies on local or signaled timestamp)
+
+                    addSystemMessage('Joined the active call');
+                    return;
+                }
+
                 // Start call: get media, add tracks, send call-start signal
                 const stream = await media.startMedia(startWithVideo);
                 webrtcHook.addTracksToAllPeers(stream);
@@ -297,7 +341,7 @@ export default function App() {
                 console.error('[App] Media error:', err);
             }
         }
-    }, [isCallActive, media, webrtcHook, callSignaling, addSystemMessage, addCallEventMessage]);
+    }, [isCallActive, media, webrtcHook, callSignaling, addSystemMessage, addCallEventMessage, roomCallStatus]);
 
     /* ── Accept incoming call ── */
     const handleAcceptCall = useCallback(async () => {
