@@ -123,12 +123,28 @@ export function useWebRTC({
             // Remote tracks
             pc.ontrack = (e) => {
                 console.log(`[WebRTC] ontrack from ${remotePeerId}:`, e.track.kind, 'streams:', e.streams.length);
-                const firstStream = e.streams?.[0];
-                const stream = firstStream ?? new MediaStream([e.track]);
-                if (!firstStream) {
-                    console.warn(`[WebRTC] No stream in ontrack, created new MediaStream for ${remotePeerId}`);
-                }
-                updatePeerStream(remotePeerId, stream);
+
+                // Instead of relying on e.streams[0] (which might be new and miss existing audio),
+                // we gather ALL live tracks from the receiver.
+                const updateStream = () => {
+                    const allTracks = pc.getReceivers()
+                        .map(r => r.track)
+                        .filter(t => t.readyState === 'live');
+
+                    if (allTracks.length > 0) {
+                        const combinedStream = new MediaStream(allTracks);
+                        updatePeerStream(remotePeerId, combinedStream);
+                    }
+                };
+
+                // Initial update
+                updateStream();
+
+                // If a track ends (e.g. muting/unmuting might replace tracks, or just ending), ensure we clean up
+                e.track.onended = () => {
+                    console.log(`[WebRTC] Track ${e.track.kind} ended for ${remotePeerId}`);
+                    updateStream();
+                };
             };
 
             // Connection state changes
