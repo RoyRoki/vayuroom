@@ -13,11 +13,13 @@ import { db } from '../lib/firebase';
 import type { Signal, PresenceEntry } from '../types';
 import { HEARTBEAT_INTERVAL, PRESENCE_STALE_MS, MAX_PEERS } from '../types';
 import { now } from '../lib/utils';
+import { encrypt, decrypt } from '../lib/crypto'; // Import crypto functions
 
 interface UseSignalingProps {
     roomHash: string;
     peerId: string;
     displayName: string;
+    aesKey: CryptoKey | null; // Add aesKey prop
     onSignal: (signal: Signal) => void;
     onPeerJoin: (peerId: string, entry: PresenceEntry) => void;
     onPeerLeave: (peerId: string) => void;
@@ -27,6 +29,7 @@ export function useSignaling({
     roomHash,
     peerId,
     displayName,
+    aesKey,
     onSignal,
     onPeerJoin,
     onPeerLeave,
@@ -126,7 +129,27 @@ export function useSignaling({
             // best-effort cleanup
         }
         activeRoomRef.current = '';
+        activeRoomRef.current = '';
     }, [roomHash, peerId]);
+
+    const destroyRoom = useCallback(async () => {
+        if (heartbeatRef.current) {
+            clearInterval(heartbeatRef.current);
+            heartbeatRef.current = null;
+        }
+        if (staleCleanupRef.current) {
+            clearInterval(staleCleanupRef.current);
+            staleCleanupRef.current = null;
+        }
+        try {
+            // Remove the ENTIRE room node
+            await remove(ref(db, `rooms/${roomHash}`));
+            console.log(`[Signaling] Destroyed room ${roomHash}`);
+        } catch (e) {
+            console.error('[Signaling] Failed to destroy room', e);
+        }
+        activeRoomRef.current = '';
+    }, [roomHash]);
 
     /* ── beforeunload / pagehide: best-effort cleanup on tab close ── */
     useEffect(() => {
@@ -164,9 +187,24 @@ export function useSignaling({
                 timestamp: now(),
                 politeness: joinOrderRef.current,
             };
+
+            if (aesKey && signal.payload) {
+                try {
+                    const jsonPayload = JSON.stringify(signal.payload);
+                    const { encrypted, iv } = await encrypt(aesKey, jsonPayload);
+                    fullSignal.encrypted = encrypted;
+                    fullSignal.iv = iv;
+                    fullSignal.payload = null; // Don't send plaintext payload
+                } catch (err) {
+                    console.error('[Signaling] Encryption failed:', err);
+                    // Fallback to plaintext if encryption fails? Or just fail?
+                    // For now, let's just log and send plaintext as fallback
+                }
+            }
+
             await set(newRef, fullSignal);
         },
-        [roomHash]
+        [roomHash, aesKey]
     );
 
     /* ── Listen for peer presence + signals ── */
@@ -208,7 +246,7 @@ export function useSignaling({
         });
 
         // Listen for signals directed at us
-        const unsubSignals = onChildAdded(signalsPath, (snap) => {
+        const unsubSignals = onChildAdded(signalsPath, async (snap) => {
             const signal = snap.val() as Signal;
             if (!signal || signal.senderId === peerId) return;
             if (signal.targetId && signal.targetId !== peerId) return;
@@ -217,6 +255,17 @@ export function useSignaling({
             if (now() - signal.timestamp > 60_000) {
                 remove(snap.ref).catch(() => { });
                 return;
+            }
+
+            // Decrypt payload if encrypted
+            if (signal.encrypted && signal.iv && aesKey) {
+                try {
+                    const jsonPayload = await decrypt(aesKey, signal.encrypted, signal.iv);
+                    signal.payload = JSON.parse(jsonPayload);
+                } catch (err) {
+                    console.error('[Signaling] Decryption failed:', err);
+                    return; // Ignore malformed signals
+                }
             }
 
             onSignalRef.current(signal);
@@ -228,11 +277,12 @@ export function useSignaling({
             unsubLeave();
             unsubSignals();
         };
-    }, [roomHash, peerId]);
+    }, [roomHash, peerId, aesKey]);
 
     return {
         joinRoom,
         leaveRoom,
+        destroyRoom,
         sendSignal,
         joinOrder: joinOrderRef.current,
     };

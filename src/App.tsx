@@ -62,6 +62,7 @@ export default function App() {
         roomHash: derived?.roomHash ?? '',
         peerId: peerIdRef.current,
         displayName: displayNameRef.current,
+        aesKey: derived?.aesKey ?? null,
         onSignal: handleSignalCb,
         onPeerJoin: handlePeerJoinCb,
         onPeerLeave: handlePeerLeaveCb,
@@ -246,13 +247,35 @@ export default function App() {
         callerNameRef.current = '';
         media.stopMedia();
         webrtcHook.closeAll();
-        await signaling.leaveRoom();
+
+        try {
+            // Check if I am the last one (peerCount includes me, so <= 1 means just me)
+            const isLastUser = useRoomStore.getState().peerCount <= 1;
+
+            if (isLastUser) {
+                console.log('Last user leaving - destroying room...');
+                await signaling.destroyRoom();
+            } else {
+                await signaling.leaveRoom();
+            }
+        } catch (e) {
+            console.warn('Failed to leave room cleanly', e);
+        }
+
         resetStore();
         resetCrypto();
-        peerIdRef.current = generatePeerId();
-        displayNameRef.current = peerIdRef.current;
-        setScreen('join');
-        toast('Left the room', { icon: '🚪' });
+
+        // ── Clean Exit ──
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // Use replace to ensure no back-button history to the room
+        window.location.replace('https://google.com');
+        // Or if you prefer to stay in app but clean: 
+        // window.location.reload(); 
+
+        // But user requested "cleanup", so navigation away is safer for "tracks".
+        // toast('Left the room', { icon: '🚪' }); // Won't be seen if we redirect
     }, [isCallActive, callSignaling, media, webrtcHook, signaling, resetStore, resetCrypto, setIncomingCall]);
 
     /* ── Duplicate Tab Detection ── */

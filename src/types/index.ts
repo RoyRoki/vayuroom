@@ -72,6 +72,8 @@ export interface Signal {
     payload: RTCSessionDescriptionInit | RTCIceCandidateInit | null;
     timestamp: number;
     politeness: number;
+    encrypted?: string;
+    iv?: string;
 }
 
 /* ── Call Signaling ── */
