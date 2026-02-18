@@ -1,7 +1,7 @@
 import { toast } from 'react-hot-toast';
 import { Logo } from './Logo';
 import { StatusIndicator } from './StatusIndicator';
-import { LogOut, Users, Phone, Video } from 'lucide-react';
+import { LogOut, User, Users, UserPlus, UserX, Phone, Video } from 'lucide-react';
 import type { ConnectionStatus, ConnectionQuality } from '../types';
 import { MAX_PEERS } from '../types';
 import { useRoomStore } from '../store/useRoomStore';
@@ -46,19 +46,23 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
 
     return (
         <header className="room-header">
-            <div className="room-header-logo" onDoubleClick={handleSecretToggle} style={{ cursor: 'pointer', userSelect: 'none' }} title="Double click to toggle sound">
+            <div className="room-header-logo" onDoubleClick={handleSecretToggle} style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '12px' }} title="Double click to toggle sound">
                 <Logo
                     size="sm"
                     iconOverlay={
                         <StatusIndicator status={getStatusType(connectionStatus, connectionQuality)} />
                     }
                 />
-            </div>
-
-            <div className="room-header-info">
-                <div className="room-header-peers">
-                    <Users size={14} />
-                    <span>{peerCount}/{MAX_PEERS}</span>
+                <div className="room-header-peers" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
+                    {peerCount === 1 ? (
+                        <User size={14} />
+                    ) : peerCount === 2 ? (
+                        <Users size={14} />
+                    ) : peerCount === 3 ? (
+                        <UserPlus size={14} />
+                    ) : (
+                        <UserX size={14} />
+                    )}
                 </div>
             </div>
 

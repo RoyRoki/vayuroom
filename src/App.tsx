@@ -446,6 +446,9 @@ export default function App() {
             const stream = await media.startScreenShare();
             if (stream) {
                 webrtcHook.addTracksToAllPeers(stream);
+            } else {
+                // Failed to start screen share (user cancelled or not supported)
+                toast.error('Failed to start screen share');
             }
         }
     }, [media, webrtcHook, playSound]);
