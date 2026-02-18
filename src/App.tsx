@@ -471,14 +471,12 @@ export default function App() {
             <Toaster
                 position="top-center"
                 toastOptions={{
-                    style: {
-                        background: '#262626',
-                        color: '#F5F5F5',
-                        fontSize: '14px',
-                        borderRadius: '12px',
-                        border: '1px solid #363636',
-                    },
+                    className: 'toast-glass',
                     duration: 3000,
+                    style: {
+                        background: 'rgba(38, 38, 38, 0.8)',
+                        color: '#fff',
+                    }
                 }}
             />
 

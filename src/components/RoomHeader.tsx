@@ -1,9 +1,9 @@
+
 import { toast } from 'react-hot-toast';
 import { Logo } from './Logo';
 import { StatusIndicator } from './StatusIndicator';
 import { LogOut, User, Users, UserPlus, UserX, Phone, Video } from 'lucide-react';
 import type { ConnectionStatus, ConnectionQuality } from '../types';
-import { MAX_PEERS } from '../types';
 import { useRoomStore } from '../store/useRoomStore';
 import './RoomHeader.css';
 
@@ -37,10 +37,7 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
         const newState = !isSoundEnabled;
         toast(newState ? 'Sound On 🔊' : 'Sound Off 🔇', {
             id: 'sound-toggle',
-            style: {
-                background: '#333',
-                color: '#fff',
-            }
+            className: 'toast-glass',
         });
     };
 
