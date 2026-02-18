@@ -124,11 +124,11 @@ export function useSignaling({
         }
         try {
             await remove(ref(db, `rooms/${roomHash}/presence/${peerId}`));
-            await remove(ref(db, `rooms/${roomHash}/signals`));
+            // transform: Remove destructive signal deletion
+            // await remove(ref(db, `rooms/${roomHash}/signals`));
         } catch {
             // best-effort cleanup
         }
-        activeRoomRef.current = '';
         activeRoomRef.current = '';
     }, [roomHash, peerId]);
 

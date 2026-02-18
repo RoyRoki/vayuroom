@@ -6,8 +6,9 @@ interface UseMediaReturn {
     isVideoEnabled: boolean;
     startMedia: (video?: boolean) => Promise<MediaStream>;
     stopMedia: () => void;
-    toggleAudio: () => void;
-    toggleVideo: () => void;
+    toggleAudio: () => Promise<void>;
+    toggleVideo: () => Promise<void>;
+    switchCamera: () => Promise<MediaStream | null>;
     getBlackVideoTrack: () => MediaStreamTrack;
 }
 
@@ -70,21 +71,51 @@ export function useMediaDevices(): UseMediaReturn {
         setIsVideoEnabled(false);
     }, [localStream]);
 
-    const toggleAudio = useCallback(() => {
+    const toggleAudio = useCallback(async () => {
         if (!localStream) return;
         const track = localStream.getAudioTracks()[0];
         if (track) {
             track.enabled = !track.enabled;
             setIsAudioEnabled(track.enabled);
+        } else {
+            // No audio track? Try to add one (unlikely for audio-first, but possible)
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const newTrack = newStream.getAudioTracks()[0];
+                if (newTrack) {
+                    localStream.addTrack(newTrack);
+                    setIsAudioEnabled(true);
+                }
+            } catch (err) {
+                console.error('Failed to add audio track:', err);
+            }
         }
     }, [localStream]);
 
-    const toggleVideo = useCallback(() => {
+    const toggleVideo = useCallback(async () => {
         if (!localStream) return;
         const track = localStream.getVideoTracks()[0];
         if (track) {
             track.enabled = !track.enabled;
             setIsVideoEnabled(track.enabled);
+        } else {
+            // No video track (e.g. started as audio only). Request one.
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        facingMode: 'user',
+                    }
+                });
+                const newTrack = newStream.getVideoTracks()[0];
+                if (newTrack) {
+                    localStream.addTrack(newTrack);
+                    setIsVideoEnabled(true);
+                }
+            } catch (err) {
+                console.error('Failed to add video track:', err);
+            }
         }
     }, [localStream]);
 
@@ -105,6 +136,58 @@ export function useMediaDevices(): UseMediaReturn {
         return track;
     }, []);
 
+    /** Switch between available video devices */
+    const switchCamera = useCallback(async () => {
+        if (!localStream) return null; // Can't switch if no stream
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(d => d.kind === 'videoinput');
+            if (videoDevices.length < 2) {
+                console.warn('Only one video device found');
+                return localStream;
+            }
+
+            const currentTrack = localStream.getVideoTracks()[0];
+            const currentLabel = currentTrack?.label || '';
+
+            // Find current device index
+            const currentIndex = videoDevices.findIndex(d => d.label === currentLabel);
+            // Pick next device (cycle)
+            const nextDevice = videoDevices[(currentIndex + 1) % videoDevices.length];
+            if (!nextDevice) {
+                console.warn('No next device found');
+                return localStream;
+            }
+
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    deviceId: { exact: nextDevice.deviceId }
+                },
+                audio: isAudioEnabled // Keep audio setting
+            });
+
+            // Allow stopping current track
+            currentTrack?.stop();
+
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            const oldAudioTrack = localStream.getAudioTracks()[0];
+
+            // Filter out undefined tracks to satisfy MediaStream constructor
+            const tracks: MediaStreamTrack[] = [oldAudioTrack, newVideoTrack].filter((t): t is MediaStreamTrack => !!t);
+
+            const combinedStream = new MediaStream(tracks);
+
+            setLocalStream(combinedStream);
+            setIsVideoEnabled(true);
+            return combinedStream;
+
+        } catch (err) {
+            console.error('Failed to switch camera:', err);
+            return localStream;
+        }
+    }, [localStream, isAudioEnabled]);
+
     return {
         localStream,
         isAudioEnabled,
@@ -113,6 +196,7 @@ export function useMediaDevices(): UseMediaReturn {
         stopMedia,
         toggleAudio,
         toggleVideo,
+        switchCamera,
         getBlackVideoTrack,
     };
 }

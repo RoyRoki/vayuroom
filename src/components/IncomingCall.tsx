@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Phone, PhoneOff, Lock } from 'lucide-react';
 import type { IncomingCallInfo } from '../types';
+import { useSound } from '../hooks/useSound';
 import './IncomingCall.css';
 
 interface Props {
@@ -9,6 +11,16 @@ interface Props {
 }
 
 export function IncomingCall({ callInfo, onAccept, onDecline }: Props) {
+    const { playSound } = useSound();
+
+    // Loop incoming call ring sound every 2 seconds
+    useEffect(() => {
+        playSound('call-incoming');
+        const interval = setInterval(() => {
+            playSound('call-incoming');
+        }, 2000);
+        return () => clearInterval(interval);
+    }, [playSound]);
     return (
         <div className="incoming-call-overlay">
             {/* Top */}

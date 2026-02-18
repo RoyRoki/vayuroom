@@ -12,6 +12,7 @@ import { db } from '../lib/firebase';
 import { useRoomStore } from '../store/useRoomStore';
 import { encrypt, decrypt } from '../lib/crypto';
 import { generateId, now } from '../lib/utils';
+import { useSound } from './useSound';
 import type { Message } from '../types';
 
 interface UseChatProps {
@@ -23,6 +24,7 @@ interface UseChatProps {
 
 export function useChat({ roomHash, peerId, displayName, aesKey }: UseChatProps) {
     const addMessage = useRoomStore((s) => s.addMessage);
+    const { playSound } = useSound();
 
     const sendMessage = useCallback(async (text: string) => {
         if (!roomHash || !aesKey) return;
@@ -53,7 +55,8 @@ export function useChat({ roomHash, peerId, displayName, aesKey }: UseChatProps)
         };
 
         await set(newMsgRef, payload);
-    }, [roomHash, peerId, displayName, aesKey]);
+        playSound('message-send');
+    }, [roomHash, peerId, displayName, aesKey, playSound]);
 
     useEffect(() => {
         if (!roomHash || !aesKey) return;
@@ -64,22 +67,16 @@ export function useChat({ roomHash, peerId, displayName, aesKey }: UseChatProps)
             const data = snapshot.val() as Message;
             if (!data) return;
 
-            // Decrypt if it's from someone else (or even if it's us, to confirm receipt?)
-            // Actually, we can just decrypt everything coming in.
-            // If it's our own message, we might have ALREADY added it optimistically?
-            // For simplicity, let's rely on the store's deduplication if it exists, or just check IDs.
-
+            // Decrypt if it's from someone else
             try {
-                // If text is missing (it should be for others), decrypt it
                 let text = data.text;
                 if (!text && data.encrypted && data.iv) {
                     text = await decrypt(aesKey, data.encrypted, data.iv);
                 }
 
-                // If we still don't have text and it's not us (who might have sent it with text locally)
-                // Actually, we should probably just ALWAYS decrypt to be safe and consistent
-                if (data.encrypted && data.iv) {
-                    text = await decrypt(aesKey, data.encrypted, data.iv);
+                // If it's not our message, play a sound
+                if (data.senderId !== peerId) {
+                    playSound('message-receive');
                 }
 
                 addMessage({
@@ -96,7 +93,7 @@ export function useChat({ roomHash, peerId, displayName, aesKey }: UseChatProps)
         return () => {
             off(chatRef, 'child_added', handleNewMessage);
         };
-    }, [roomHash, aesKey, addMessage]);
+    }, [roomHash, aesKey, addMessage, peerId, playSound]);
 
     return { sendMessage };
 }

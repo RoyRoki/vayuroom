@@ -10,6 +10,7 @@ import { useCallSignaling } from './hooks/useCallSignaling';
 import { useRoomStore } from './store/useRoomStore';
 import { useChat } from './hooks/useChat';
 import { useIdleTimeout } from './hooks/useIdleTimeout';
+import { useSound } from './hooks/useSound';
 import { generatePeerId } from './lib/utils';
 import type { Signal, PresenceEntry, CallSignal } from './types';
 
@@ -27,6 +28,7 @@ export default function App() {
 
     const { derived, isLoading, derive, reset: resetCrypto } = useCrypto();
     const media = useMediaDevices();
+    const { playSound } = useSound();
 
     // Store Actions (Stable)
     const setRoomHash = useRoomStore(s => s.setRoomHash);
@@ -46,17 +48,19 @@ export default function App() {
 
     const handlePeerJoinCb = useCallback((peerId: string, entry: PresenceEntry) => {
         addSystemMessage(`${entry.displayName} joined the chat`);
+        playSound('join');
         // Add to store immediately based on presence
         addRemotePeer(peerId, entry.displayName);
         webrtcRef.current?.handlePeerJoin(peerId, entry);
-    }, [addRemotePeer]);
+    }, [addRemotePeer, playSound]);
 
     const handlePeerLeaveCb = useCallback((peerId: string) => {
         addSystemMessage(`A peer left the chat`);
+        playSound('leave');
         // MUST close the WebRTC connection entry, otherwise the map fills up
         webrtcRef.current?.closeConnection(peerId);
         removeRemotePeer(peerId);
-    }, [removeRemotePeer]);
+    }, [removeRemotePeer, playSound]);
 
     const signaling = useSignaling({
         roomHash: derived?.roomHash ?? '',
@@ -92,16 +96,18 @@ export default function App() {
     /* ── Call Signaling Callbacks ── */
     const handleIncomingCall = useCallback((signal: CallSignal) => {
         // Another peer started a call — show ringing
+        playSound('call-incoming');
         setIncomingCall({
             callerId: signal.senderId,
             callerName: signal.senderName,
             callType: signal.callType,
             timestamp: signal.timestamp,
         });
-    }, [setIncomingCall]);
+    }, [setIncomingCall, playSound]);
 
     const handleCallAnswered = useCallback(async (signal: CallSignal) => {
         // Someone accepted our call — now the call is truly connected
+        playSound('call-answered');
         setIsCallAnswered(true);
         // Use the timestamp from the signal (which might be from persistent state for late joiners)
         callStartTimeRef.current = signal.timestamp || Date.now();
@@ -123,17 +129,14 @@ export default function App() {
             }
             setIsCallAnswered(true);
         }
-    }, [isCallActive, media, webrtcHook]);
+    }, [isCallActive, media, webrtcHook, playSound]);
 
     const endCallRef = useRef<((duration?: number, startTime?: number, endTime?: number) => Promise<void>) | null>(null);
 
     const handleCallRejected = useCallback(async (signal: CallSignal) => {
         // Someone declined our call
+        playSound('call-declined');
         if (isCallActive) {
-            // If we are the caller, we need to clean up the persistent state "ringing"
-            // so the room returns to "idle" and buttons reappear.
-            // Since the current logic stops the call immediately on ANY rejection,
-            // we should also clear the backend state.
             if (endCallRef.current) {
                 await endCallRef.current();
             }
@@ -156,10 +159,11 @@ export default function App() {
         setIncomingCall(null);
         callStartTimeRef.current = null;
         callerNameRef.current = '';
-    }, [isCallActive, media, webrtcHook, addCallEventMessage, setIncomingCall]);
+    }, [isCallActive, media, webrtcHook, addCallEventMessage, setIncomingCall, playSound]);
 
     const handleCallEnded = useCallback((signal: CallSignal) => {
         // Remote peer ended the call
+        playSound('call-end');
         if (isCallActive) {
             const endTime = Date.now();
             const startTime = callStartTimeRef.current || endTime;
@@ -182,7 +186,7 @@ export default function App() {
         setIncomingCall(null);
         callStartTimeRef.current = null;
         callerNameRef.current = '';
-    }, [isCallActive, media, webrtcHook, addCallEventMessage, setIncomingCall]);
+    }, [isCallActive, media, webrtcHook, addCallEventMessage, setIncomingCall, playSound]);
 
     const callSignaling = useCallSignaling({
         roomHash: derived?.roomHash ?? '',
@@ -250,7 +254,8 @@ export default function App() {
 
         try {
             // Check if I am the last one (peerCount includes me, so <= 1 means just me)
-            const isLastUser = useRoomStore.getState().peerCount <= 1;
+            const currentPeerCount = useRoomStore.getState().peerCount;
+            const isLastUser = currentPeerCount <= 1;
 
             if (isLastUser) {
                 console.log('Last user leaving - destroying room...');
@@ -307,6 +312,7 @@ export default function App() {
     const handleToggleCall = useCallback(async (startWithVideo = false) => {
         if (isCallActive) {
             // End call
+            playSound('call-end');
             const endTime = Date.now();
             const startTime = callStartTimeRef.current || endTime;
             const duration = Math.floor((endTime - startTime) / 1000);
@@ -364,11 +370,12 @@ export default function App() {
                 console.error('[App] Media error:', err);
             }
         }
-    }, [isCallActive, media, webrtcHook, callSignaling, addSystemMessage, addCallEventMessage, roomCallStatus]);
+    }, [isCallActive, media, webrtcHook, callSignaling, addSystemMessage, addCallEventMessage, roomCallStatus, playSound]);
 
     /* ── Accept incoming call ── */
     const handleAcceptCall = useCallback(async () => {
         try {
+            playSound('call-answered');
             const incomingCall = useRoomStore.getState().incomingCall;
             const isVideo = incomingCall?.callType === 'video';
             callerNameRef.current = incomingCall?.callerName || '';
@@ -386,10 +393,11 @@ export default function App() {
             const msg = err instanceof Error ? err.message : 'Could not access media devices';
             toast.error(msg);
         }
-    }, [media, webrtcHook, callSignaling, setIncomingCall]);
+    }, [media, webrtcHook, callSignaling, setIncomingCall, playSound]);
 
     /* ── Decline incoming call ── */
     const handleDeclineCall = useCallback(async () => {
+        playSound('call-declined');
         const incomingCall = useRoomStore.getState().incomingCall;
         setIncomingCall(null);
 
@@ -399,7 +407,44 @@ export default function App() {
             callerName: incomingCall?.callerName || 'Unknown',
             callStatus: 'missed',
         });
-    }, [callSignaling, setIncomingCall, addCallEventMessage]);
+    }, [callSignaling, setIncomingCall, addCallEventMessage, playSound]);
+
+    /* ── Toggle Audio with Sound ── */
+    const handleToggleAudio = useCallback(async () => {
+        playSound(media.isAudioEnabled ? 'mic-off' : 'mic-on');
+        await media.toggleAudio();
+    }, [media, playSound]);
+
+    /* ── Toggle Video & Update Peers ── */
+    const handleToggleVideo = useCallback(async () => {
+        playSound(media.isVideoEnabled ? 'cam-off' : 'cam-on');
+        await media.toggleVideo();
+        if (media.localStream) {
+            webrtcHook.addTracksToAllPeers(media.localStream);
+        }
+    }, [media, webrtcHook, playSound]);
+
+    /* ── Switch Camera ── */
+    const handleSwitchCamera = useCallback(async () => {
+        playSound('cam-flip');
+        const newStream = await media.switchCamera();
+        if (newStream) {
+            webrtcHook.addTracksToAllPeers(newStream);
+        }
+    }, [media, webrtcHook, playSound]);
+
+    /* ── Outgoing Call Ringback ── */
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (roomCallStatus === 'ringing' && isCallActive && !isCallAnswered) {
+            // We are the caller (or at least in the call while it's ringing)
+            // Play ringback tone every 2.5s
+            const playRingback = () => playSound('call-outgoing');
+            playRingback();
+            interval = setInterval(playRingback, 2500);
+        }
+        return () => clearInterval(interval);
+    }, [roomCallStatus, isCallActive, isCallAnswered, playSound]);
 
     return (
         <>
@@ -432,8 +477,9 @@ export default function App() {
                     activeCallType={activeCallType}
                     connectionQuality={connectionQuality}
                     onSendMessage={chatHook.sendMessage}
-                    onToggleAudio={media.toggleAudio}
-                    onToggleVideo={media.toggleVideo}
+                    onToggleAudio={handleToggleAudio}
+                    onToggleVideo={handleToggleVideo}
+                    onSwitchCamera={handleSwitchCamera}
                     onToggleCall={handleToggleCall}
                     onAcceptCall={handleAcceptCall}
                     onDeclineCall={handleDeclineCall}

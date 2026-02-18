@@ -1,8 +1,10 @@
+import { toast } from 'react-hot-toast';
 import { Logo } from './Logo';
 import { StatusIndicator } from './StatusIndicator';
 import { LogOut, Users, Phone, Video } from 'lucide-react';
 import type { ConnectionStatus, ConnectionQuality } from '../types';
 import { MAX_PEERS } from '../types';
+import { useRoomStore } from '../store/useRoomStore';
 import './RoomHeader.css';
 
 interface Props {
@@ -27,9 +29,24 @@ function getStatusType(status: ConnectionStatus, quality: ConnectionQuality): 'o
 }
 
 export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onLeave, onToggleCall, isCallActive, roomCallStatus }: Props) {
+    const isSoundEnabled = useRoomStore((s) => s.isSoundEnabled);
+    const toggleSound = useRoomStore((s) => s.toggleSound);
+
+    const handleSecretToggle = () => {
+        toggleSound();
+        const newState = !isSoundEnabled;
+        toast(newState ? 'Sound On 🔊' : 'Sound Off 🔇', {
+            id: 'sound-toggle',
+            style: {
+                background: '#333',
+                color: '#fff',
+            }
+        });
+    };
+
     return (
         <header className="room-header">
-            <div className="room-header-logo">
+            <div className="room-header-logo" onDoubleClick={handleSecretToggle} style={{ cursor: 'pointer', userSelect: 'none' }} title="Double click to toggle sound">
                 <Logo
                     size="sm"
                     iconOverlay={
@@ -84,3 +101,4 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
         </header>
     );
 }
+

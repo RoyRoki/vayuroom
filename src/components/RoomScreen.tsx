@@ -17,6 +17,7 @@ interface Props {
     onSendMessage: (text: string) => void;
     onToggleAudio: () => void;
     onToggleVideo: () => void;
+    onSwitchCamera: () => void;
     onToggleCall: (video?: boolean) => void;
     onAcceptCall: () => void;
     onDeclineCall: () => void;
@@ -36,6 +37,7 @@ export function RoomScreen({
     onSendMessage,
     onToggleAudio,
     onToggleVideo,
+    onSwitchCamera,
     onToggleCall,
     onAcceptCall,
     onDeclineCall,
@@ -93,6 +95,7 @@ export function RoomScreen({
                     remotePeers={remotePeers}
                     onToggleAudio={onToggleAudio}
                     onToggleVideo={onToggleVideo}
+                    onSwitchCamera={onSwitchCamera}
                     onEndCall={() => onToggleCall(false)}
                     isCallAnswered={isCallAnswered}
                     startTime={callStartTime}

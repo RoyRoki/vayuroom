@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Lock, User } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Lock, User, SwitchCamera, Phone } from 'lucide-react';
 import type { Peer } from '../types';
 import './VideoCall.css';
 
@@ -10,6 +10,7 @@ interface Props {
     remotePeers: Record<string, Peer>;
     onToggleAudio: () => void;
     onToggleVideo: () => void;
+    onSwitchCamera: () => void;
     onEndCall: () => void;
     isCallAnswered: boolean;
     startTime?: number;
@@ -28,6 +29,7 @@ export function VideoCall({
     remotePeers,
     onToggleAudio,
     onToggleVideo,
+    onSwitchCamera,
     onEndCall,
     isCallAnswered,
     startTime,
@@ -55,11 +57,6 @@ export function VideoCall({
     const isGroupCall = remoteEntries.length > 1;
     const remoteName = remoteEntries[0]?.[1]?.displayName || 'Video Call';
 
-    // We render differently based on:
-    // 1. Not answered (Calling...)
-    // 2. Answered 1:1 (Full screen remote, PiP local)
-    // 3. Answered Group (Grid)
-
     return (
         <div className="video-call-overlay">
             {/* Top Bar */}
@@ -77,22 +74,33 @@ export function VideoCall({
             {/* Main Content */}
             <div className="video-call-content" style={{ flex: 1, position: 'relative' }}>
 
-                {/* CASE 1: Calling... (Not answered yet) */}
+                {/* CASE 1: Calling... (Not answered yet) — Animated like AudioCall */}
                 {!isCallAnswered && (
                     <div className="video-call-waiting">
-                        <div className="video-call-waiting-avatar">
-                            <User size={48} />
+                        <div className="vcall-avatar-wrap">
+                            <div className="vcall-avatar is-calling">
+                                <div className="vcall-avatar-inner">
+                                    <Phone size={48} className="vcall-avatar-icon animate-pulse-slow" />
+                                </div>
+                            </div>
+                            {/* Pulse rings */}
+                            <div className="vcall-ring vcall-ring--1" />
+                            <div className="vcall-ring vcall-ring--2" />
+                            <div className="vcall-ring vcall-ring--3" />
                         </div>
-                        <span className="video-call-waiting-name">
-                            {isGroupCall ? 'Group Call' : remoteName}
-                        </span>
-                        <span className="video-call-waiting-status">Calling...</span>
 
-                        {/* We show local video in background or faint if desired, 
-                            but standard behavior is often just the calling screen. 
-                            However, user might want to see themselves. Let's put local video as full background for now?
-                            Or just keep it simple with the darkened background.
-                        */}
+                        <div className="vcall-info">
+                            <span className="vcall-name">
+                                {isGroupCall ? 'Group Call' : remoteName}
+                            </span>
+                            <div className="vcall-status-wrap">
+                                <Phone size={16} className="animate-pulse" />
+                                <span className="vcall-status">Calling</span>
+                                <div className="vcall-status-dots">
+                                    <span>.</span><span>.</span><span>.</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -139,6 +147,17 @@ export function VideoCall({
                 >
                     {isVideoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
                 </button>
+
+                {/* Switch Camera Button (only show if video enabled?) or always show */}
+                {isVideoEnabled && (
+                    <button
+                        className="video-call-btn"
+                        onClick={onSwitchCamera}
+                        title="Switch Camera"
+                    >
+                        <SwitchCamera size={24} />
+                    </button>
+                )}
 
                 <button
                     className={`video-call-btn ${!isAudioEnabled ? 'is-active' : ''}`}
@@ -188,19 +207,56 @@ function LocalVideo({ stream, isEnabled }: { stream: MediaStream | null, isEnabl
 
 function RemoteVideo({ peer, className }: { peer: Peer, className?: string }) {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [hasVideo, setHasVideo] = useState(false);
 
     useEffect(() => {
         if (videoRef.current && peer.stream) {
             videoRef.current.srcObject = peer.stream;
+            // Check if there's actually a video track
+            const checkVideo = () => {
+                const tracks = peer.stream?.getVideoTracks() || [];
+                const enabled = tracks.some(t => t.enabled && t.readyState === 'live');
+                setHasVideo(peer.isVideoEnabled && enabled);
+            };
+
+            checkVideo();
+            // Listen for track changes (mute/unmute)
+            peer.stream.getVideoTracks().forEach(track => {
+                track.onmute = checkVideo;
+                track.onunmute = checkVideo;
+                track.onended = checkVideo;
+            });
+            return () => {
+                peer.stream?.getVideoTracks().forEach(track => {
+                    track.onmute = null;
+                    track.onunmute = null;
+                    track.onended = null;
+                });
+            };
+        } else {
+            setHasVideo(false);
         }
-    }, [peer.stream]);
+    }, [peer.stream, peer.isVideoEnabled]);
 
     return (
-        <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            className={className || "video-el"}
-        />
+        <div className={`${className || "video-el"} video-el-container`}>
+            {/* Always render video for audio playback */}
+            <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                className={`video-el ${hasVideo ? 'is-visible' : 'is-hidden'}`}
+            />
+
+            {/* Fallback Avatar */}
+            {!hasVideo && (
+                <div className="video-fallback-avatar">
+                    <div className="video-call-avatar-inner">
+                        <User size={48} className="text-white" />
+                    </div>
+                    <span className="video-fallback-name">{peer.displayName}</span>
+                </div>
+            )}
+        </div>
     );
 }

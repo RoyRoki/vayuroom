@@ -6,6 +6,8 @@
     min-height: 100dvh;
     padding: var(--sp-6);
     gap: var(--sp-8);
+    /* Twilight Gradient Background */
+    background: radial-gradient(circle at 50% 0%, #2d1b4e 0%, #0a0a0a 60%, #000000 100%);
 }
 
 .join-card {
@@ -16,9 +18,13 @@
     width: 100%;
     max-width: 380px;
     padding: var(--sp-8) var(--sp-6);
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
+    /* Glassmorphism Card */
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: var(--radius-lg);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .join-tagline {

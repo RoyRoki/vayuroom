@@ -37,6 +37,10 @@ interface RoomStore {
     updatePeerStream: (id: string, stream: MediaStream) => void;
 
     reset: () => void;
+
+    /* ── Settings ── */
+    isSoundEnabled: boolean;
+    toggleSound: () => void;
 }
 
 const initialState = {
@@ -50,6 +54,7 @@ const initialState = {
     incomingCall: null as IncomingCallInfo | null,
     callStartTime: null as number | null,
     callEndTime: null as number | null,
+    isSoundEnabled: false,
 };
 
 export const useRoomStore = create<RoomStore>((set) => ({
@@ -150,4 +155,5 @@ export const useRoomStore = create<RoomStore>((set) => ({
         }),
 
     reset: () => set(initialState),
+    toggleSound: () => set((s) => ({ isSoundEnabled: !s.isSoundEnabled })),
 }));

@@ -5,7 +5,8 @@
     max-width: var(--max-content);
     margin: 0 auto;
     width: 100%;
-    background: var(--bg-primary);
+    /* Instagram-like Dark Mode Gradient (Twilight) */
+    background: radial-gradient(circle at 50% 0%, #2d1b4e 0%, #0a0a0a 60%, #000000 100%);
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
 }

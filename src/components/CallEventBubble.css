@@ -7,9 +7,12 @@
     gap: var(--sp-3);
     padding: var(--sp-3) var(--sp-4);
     margin: var(--sp-2) 0;
-    background: var(--bg-elevated);
+    /* Glassy Call Label */
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--bubble-radius, 16px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     max-width: 85%;
     animation: callEventFadeIn 0.3s ease forwards;
 }

@@ -22,7 +22,8 @@
   --accent-orange: #FCA326;
 
   /* ── Gradients ── */
-  --gradient-ig: linear-gradient(45deg, #833AB4, #FD1D1D, #F77737);
+  /* Vroom Purple Gradient */
+  --gradient-primary: linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%);
   --gradient-surface: linear-gradient(135deg, #1C1C1E, #262626);
 
   /* ── Typography ── */
@@ -33,13 +34,20 @@
   --fw-semibold: 600;
   --fw-bold: 700;
 
-  --fs-xs: 0.6875rem;   /* 11px */
-  --fs-sm: 0.8125rem;   /* 13px */
-  --fs-base: 0.875rem;  /* 14px */
-  --fs-md: 1rem;        /* 16px */
-  --fs-lg: 1.25rem;     /* 20px */
-  --fs-xl: 1.5rem;      /* 24px */
-  --fs-2xl: 1.75rem;    /* 28px */
+  --fs-xs: 0.6875rem;
+  /* 11px */
+  --fs-sm: 0.8125rem;
+  /* 13px */
+  --fs-base: 0.875rem;
+  /* 14px */
+  --fs-md: 1rem;
+  /* 16px */
+  --fs-lg: 1.25rem;
+  /* 20px */
+  --fs-xl: 1.5rem;
+  /* 24px */
+  --fs-2xl: 1.75rem;
+  /* 28px */
 
   --lh-tight: 1.2;
   --lh-normal: 1.5;
