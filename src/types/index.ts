@@ -117,11 +117,15 @@ export interface DerivedKeyResult {
 export interface MediaControls {
     isAudioEnabled: boolean;
     isVideoEnabled: boolean;
+    isScreenSharing: boolean;
     toggleAudio: () => void;
     toggleVideo: () => void;
     startMedia: (video?: boolean) => Promise<MediaStream>;
     stopMedia: () => void;
+    startScreenShare: () => Promise<MediaStream | null>;
+    stopScreenShare: () => Promise<MediaStream | null>;
     localStream: MediaStream | null;
+    isScreenShareSupported: boolean;
 }
 
 /* ── Constants ── */

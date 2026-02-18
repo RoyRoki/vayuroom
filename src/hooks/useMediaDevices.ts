@@ -1,15 +1,19 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UseMediaReturn {
     localStream: MediaStream | null;
     isAudioEnabled: boolean;
     isVideoEnabled: boolean;
+    isScreenSharing: boolean;
     startMedia: (video?: boolean) => Promise<MediaStream>;
     stopMedia: () => void;
     toggleAudio: () => Promise<void>;
     toggleVideo: () => Promise<void>;
+    startScreenShare: () => Promise<MediaStream | null>;
+    stopScreenShare: () => Promise<MediaStream | null>;
     switchCamera: () => Promise<MediaStream | null>;
     getBlackVideoTrack: () => MediaStreamTrack;
+    isScreenShareSupported: boolean;
 }
 
 /**
@@ -20,7 +24,20 @@ export function useMediaDevices(): UseMediaReturn {
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [isAudioEnabled, setIsAudioEnabled] = useState(true);
     const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+    const [isScreenSharing, setIsScreenSharing] = useState(false);
     const blackTrackRef = useRef<MediaStreamTrack | null>(null);
+    const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
+
+    const [isScreenShareSupported, setIsScreenShareSupported] = useState(false);
+
+    useEffect(() => {
+        // Check if getDisplayMedia is supported
+        if (typeof navigator !== 'undefined' && navigator.mediaDevices && 'getDisplayMedia' in navigator.mediaDevices) {
+            setIsScreenShareSupported(true);
+        } else {
+            setIsScreenShareSupported(false);
+        }
+    }, []);
 
     const startMedia = useCallback(async (video = false): Promise<MediaStream> => {
         // Check if any audio input devices exist
@@ -49,6 +66,7 @@ export function useMediaDevices(): UseMediaReturn {
             setLocalStream(stream);
             setIsAudioEnabled(true);
             setIsVideoEnabled(video);
+            setIsScreenSharing(false);
             return stream;
         } catch {
             // Fallback: try with simple constraints
@@ -59,6 +77,7 @@ export function useMediaDevices(): UseMediaReturn {
             setLocalStream(stream);
             setIsAudioEnabled(true);
             setIsVideoEnabled(video);
+            setIsScreenSharing(false);
             return stream;
         }
     }, []);
@@ -66,9 +85,11 @@ export function useMediaDevices(): UseMediaReturn {
     const stopMedia = useCallback(() => {
         localStream?.getTracks().forEach((t) => t.stop());
         blackTrackRef.current?.stop();
+        originalVideoTrackRef.current = null;
         setLocalStream(null);
         setIsAudioEnabled(false);
         setIsVideoEnabled(false);
+        setIsScreenSharing(false);
     }, [localStream]);
 
     const toggleAudio = useCallback(async () => {
@@ -94,6 +115,16 @@ export function useMediaDevices(): UseMediaReturn {
 
     const toggleVideo = useCallback(async () => {
         if (!localStream) return;
+
+        // If screen sharing, stop it and revert to camera (or generate new camera stream)
+        if (isScreenSharing) {
+            await stopScreenShare();
+            // stopScreenShare reverts to camera if it was there, or might leave us with audio only.
+            // If we want to ensure video is ON after stopping screen share, we might need to explicit start camera.
+            // But for now, let's just let stopScreenShare handle the revert.
+            return;
+        }
+
         const track = localStream.getVideoTracks()[0];
         if (track) {
             track.enabled = !track.enabled;
@@ -117,6 +148,87 @@ export function useMediaDevices(): UseMediaReturn {
                 console.error('Failed to add video track:', err);
             }
         }
+    }, [localStream, isScreenSharing]);
+
+    const startScreenShare = useCallback(async (): Promise<MediaStream | null> => {
+        if (!localStream) return null;
+
+        try {
+            const displayStream = await navigator.mediaDevices.getDisplayMedia({
+                video: true,
+                audio: false // System audio sharing is tricky and often not supported cleanly mixed with mic
+            });
+            const screenTrack = displayStream.getVideoTracks()[0];
+
+            if (!screenTrack) {
+                throw new Error('No video track found in screen share stream');
+            }
+
+            // Save current camera track if exists
+            const currentVideoTrack = localStream.getVideoTracks()[0];
+            if (currentVideoTrack) {
+                originalVideoTrackRef.current = currentVideoTrack;
+                // Don't stop it, just remove it from stream? Or stop it to save resources?
+                // Better to stop it to turn off camera light, but then we can't easily resume without permissions.
+                // Actually, replaceTrack in WebRTC handles stream mod, but for localStream we need to swap tracks.
+                localStream.removeTrack(currentVideoTrack);
+                // currentVideoTrack.stop(); // If we stop, we need getUserMedia again to resume.
+                // Let's NOT stop it if we want fast resume, but browser might show camera light ON.
+                // For simplicity and privacy, let's stop the camera track.
+                currentVideoTrack.stop();
+            }
+
+            localStream.addTrack(screenTrack);
+            setIsScreenSharing(true);
+            setIsVideoEnabled(true); // Screen share is video
+
+            // Handle user clicking "Stop sharing" in browser UI
+            screenTrack.onended = () => {
+                stopScreenShare();
+            };
+
+            return localStream;
+        } catch (err) {
+            console.error('Failed to start screen share:', err);
+            return null;
+        }
+    }, [localStream]);
+
+    const stopScreenShare = useCallback(async (): Promise<MediaStream | null> => {
+        if (!localStream) return null;
+
+        const screenTrack = localStream.getVideoTracks()[0];
+        if (screenTrack) {
+            screenTrack.stop();
+            localStream.removeTrack(screenTrack);
+        }
+
+        setIsScreenSharing(false);
+        setIsVideoEnabled(false); // Default to off, let toggleVideo turn it on if needed
+
+        // Revert to camera? 
+        // Since we stopped the camera track earlier to save resources/privacy, we need to request it again.
+        // We will leave it as audio-only for now, user can enable video manually.
+        // OR we can auto-start camera if it was on before.
+        // Let's auto-start camera to be nice.
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'user',
+                }
+            });
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            if (newVideoTrack) {
+                localStream.addTrack(newVideoTrack);
+                setIsVideoEnabled(true);
+            }
+        } catch {
+            // failed to restart camera, user stays audio only
+        }
+
+        return localStream;
     }, [localStream]);
 
     /** Create a silent black video track (for when camera is off) */
@@ -138,7 +250,7 @@ export function useMediaDevices(): UseMediaReturn {
 
     /** Switch between available video devices */
     const switchCamera = useCallback(async () => {
-        if (!localStream) return null; // Can't switch if no stream
+        if (!localStream || isScreenSharing) return null; // Can't switch if no stream or screen sharing
 
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -186,17 +298,21 @@ export function useMediaDevices(): UseMediaReturn {
             console.error('Failed to switch camera:', err);
             return localStream;
         }
-    }, [localStream, isAudioEnabled]);
+    }, [localStream, isAudioEnabled, isScreenSharing]);
 
     return {
         localStream,
         isAudioEnabled,
         isVideoEnabled,
+        isScreenSharing,
         startMedia,
         stopMedia,
         toggleAudio,
         toggleVideo,
+        startScreenShare,
+        stopScreenShare,
         switchCamera,
         getBlackVideoTrack,
+        isScreenShareSupported,
     };
 }

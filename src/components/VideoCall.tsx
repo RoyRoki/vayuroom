@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Lock, User, SwitchCamera, Phone } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, Lock, User, SwitchCamera, Phone, MonitorUp, MonitorOff } from 'lucide-react';
 import type { Peer } from '../types';
 import './VideoCall.css';
 
@@ -14,6 +14,9 @@ interface Props {
     onEndCall: () => void;
     isCallAnswered: boolean;
     startTime?: number;
+    isScreenSharing: boolean;
+    isScreenShareSupported: boolean;
+    onToggleScreenShare: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -33,6 +36,9 @@ export function VideoCall({
     onEndCall,
     isCallAnswered,
     startTime,
+    isScreenSharing,
+    isScreenShareSupported,
+    onToggleScreenShare,
 }: Props) {
     const [elapsed, setElapsed] = useState(0);
     const startTimeRef = useRef(startTime || Date.now());
@@ -149,13 +155,23 @@ export function VideoCall({
                 </button>
 
                 {/* Switch Camera Button (only show if video enabled?) or always show */}
-                {isVideoEnabled && (
+                {isVideoEnabled && !isScreenSharing && (
                     <button
                         className="video-call-btn"
                         onClick={onSwitchCamera}
                         title="Switch Camera"
                     >
                         <SwitchCamera size={24} />
+                    </button>
+                )}
+
+                {isScreenShareSupported && (
+                    <button
+                        className={`video-call-btn ${isScreenSharing ? 'is-active' : ''}`}
+                        onClick={onToggleScreenShare}
+                        title={isScreenSharing ? "Stop Sharing" : "Share Screen"}
+                    >
+                        {isScreenSharing ? <MonitorOff size={24} /> : <MonitorUp size={24} />}
                     </button>
                 )}
 

@@ -433,6 +433,23 @@ export default function App() {
         }
     }, [media, webrtcHook, playSound]);
 
+    /* ── Toggle Screen Share ── */
+    const handleToggleScreenShare = useCallback(async () => {
+        if (media.isScreenSharing) {
+            playSound('cam-off'); // or a different sound?
+            const stream = await media.stopScreenShare();
+            if (stream) {
+                webrtcHook.addTracksToAllPeers(stream);
+            }
+        } else {
+            playSound('cam-on');
+            const stream = await media.startScreenShare();
+            if (stream) {
+                webrtcHook.addTracksToAllPeers(stream);
+            }
+        }
+    }, [media, webrtcHook, playSound]);
+
     /* ── Outgoing Call Ringback ── */
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -485,6 +502,9 @@ export default function App() {
                     onDeclineCall={handleDeclineCall}
                     onLeave={handleLeave}
                     callStartTime={callStartTimeRef.current ?? undefined}
+                    isScreenSharing={media.isScreenSharing}
+                    isScreenShareSupported={media.isScreenShareSupported}
+                    onToggleScreenShare={handleToggleScreenShare}
                 />
             )}
         </>

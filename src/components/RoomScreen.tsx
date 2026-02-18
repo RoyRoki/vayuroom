@@ -25,6 +25,9 @@ interface Props {
     connectionQuality: import('../types').ConnectionQuality;
     callStartTime?: number;
     activeCallType: 'audio' | 'video' | null;
+    isScreenSharing: boolean;
+    isScreenShareSupported: boolean;
+    onToggleScreenShare: () => void;
 }
 
 export function RoomScreen({
@@ -45,6 +48,9 @@ export function RoomScreen({
     connectionQuality,
     callStartTime,
     activeCallType,
+    isScreenSharing,
+    isScreenShareSupported,
+    onToggleScreenShare,
 }: Props) {
     const messages = useRoomStore((s) => s.messages);
     const remotePeers = useRoomStore((s) => s.remotePeers);
@@ -99,6 +105,9 @@ export function RoomScreen({
                     onEndCall={() => onToggleCall(false)}
                     isCallAnswered={isCallAnswered}
                     startTime={callStartTime}
+                    isScreenSharing={isScreenSharing}
+                    isScreenShareSupported={isScreenShareSupported}
+                    onToggleScreenShare={onToggleScreenShare}
                 />
             )}
 
