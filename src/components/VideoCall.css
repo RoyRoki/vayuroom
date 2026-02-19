@@ -398,6 +398,22 @@
 }
 
 /* Responsive */
+@media (max-width: 768px) {
+    .video-grid {
+        /* Allow 2 columns on mobile (3 participants fits better) */
+        grid-template-columns: repeat(auto-fit, minmax(45%, 1fr));
+        align-content: start;
+        padding-bottom: 100px;
+        /* Space for controls */
+        overflow-y: auto;
+    }
+
+    .video-cell {
+        /* Reduce min-height for mobile to see more people at once */
+        min-height: 180px;
+    }
+}
+
 @media (max-width: 480px) {
     .vcall-avatar-wrap {
         width: 120px;

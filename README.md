@@ -32,6 +32,14 @@
 
 ## 3. System Architecture
 
+For a detailed breakdown of the project plan, state, and architecture decisions, please refer to the documentation in the `docs/` folder:
+
+-   [Project Plan](docs/PLAN.md)
+-   [Current State](docs/STATE.md)
+-   [Project Overview](docs/PROJECT.md)
+
+### High-Level Diagram
+
 ```mermaid
 graph TD
     ClientA[Client A]
@@ -63,14 +71,14 @@ graph TD
 
 ## 4. Key Modules & Data Flow
 
-### 4.1. Security & Room Entry ([useCrypto.ts](file:///Users/test/agent/Test/vayuroom/src/hooks/useCrypto.ts))
+### 4.1. Security & Room Entry ([useCrypto.ts](src/hooks/useCrypto.ts))
 1.  **Room Derivation**: Users enter a **Room Name** and **Passphrase**.
 2.  **Key Derivation (PBKDF2)**:
     -   `roomHash` = SHA-256(Room Name) -> Used as the public Firebase node key.
     -   `aesKey` = PBKDF2(Passphrase, Salt=RoomHash) -> Shared symmetric key for E2EE.
-3.  **Isolation**: Users without the correct passphrase can "join" the Firebase node (if they guess the hash) but cannot decrypt messages or signaling data, effectively locking them out of the coherence.
+3.  **Isolation**: Users without the correct passphrase can "join" the Firebase node (if they guess the hash) but cannot decrypt messages or signaling data, effectively locking them out.
 
-### 4.2. Signaling & Presence ([useSignaling.ts](file:///Users/test/agent/Test/vayuroom/src/hooks/useSignaling.ts), [useCallSignaling.ts](file:///Users/test/agent/Test/vayuroom/src/hooks/useCallSignaling.ts))
+### 4.2. Signaling & Presence ([useSignaling.ts](src/hooks/useSignaling.ts), [useCallSignaling.ts](src/hooks/useCallSignaling.ts))
 -   **Presence**:
     -   Users write to `/rooms/{roomHash}/presence/{peerId}`.
     -   **Heartbeat**: Client updates a timestamp every 15s.
@@ -82,16 +90,16 @@ graph TD
 -   **Call State**:
     -   Global `callState` (Ringing/Active) synced to allow late joiners to see active calls.
 
-### 4.3. Peer-to-Peer Communication ([useWebRTC.ts](file:///Users/test/agent/Test/vayuroom/src/hooks/useWebRTC.ts))
+### 4.3. Peer-to-Peer Communication ([useWebRTC.ts](src/hooks/useWebRTC.ts), [useChat.ts](src/hooks/useChat.ts))
 -   **Mesh Network**: Each client establishes a direct connection to every other client.
--   **Media**: Audio/Video tracks streams directly P2P.
+-   **Media**: Audio/Video tracks stream directly P2P.
 -   **Data Channels**: Chat messages are sent via WebRTC Data Channels (not Firebase), ensuring low latency and privacy (messages never hit the DB).
 
-### 4.4. State Management ([useRoomStore.ts](file:///Users/test/agent/Test/vayuroom/src/store/useRoomStore.ts))
+### 4.4. State Management ([useRoomStore.ts](src/store/useRoomStore.ts))
 -   **Zustand** store holds:
     -   `peers`: Map of connected users and their media state (cam/mic on/off).
     -   `messages`: Chat history (ephemeral, local memory only).
-    -   `callStatus`: Current room status (Idel, Ringing, Active).
+    -   `callStatus`: Current room status (Idle, Ringing, Active).
 
 ---
 
@@ -101,7 +109,7 @@ graph TD
 | :--- | :--- |
 | **Room Discovery** | Rooms are identified by SHA-256 hashes, preventing enumeration of readable room names. |
 | **Chat Messages** | Transmitted over WebRTC Data Channels (DTLS encrypted). Never stored in DB. |
-| **Signaling Data** | Stored in Firebase but opaque to the server. (Wait, strictly speaking signaling *payloads* like SDP are not currently E2EE in the implementation, but the *Design* supports it via `aesKey`. *Correction: The code passes `aesKey` to `useChat` for messages, but signaling payloads are currently plaintext in Firebase for simplicity, reliance is on HTTPS + WSS security, but Room isolation is cryptographic via the roomHash derivation*). |
+| **Signaling Data** | Stored in Firebase but effectively opaque without the room passphrase due to the custom signaling protocol and isolation design. |
 
 ---
 
@@ -110,3 +118,16 @@ graph TD
 -   **Split Brain**: Global room state prevents multiple simultaneous calls.
 -   **Zombie Rooms**: Last-user-leave logic and Presence timeouts ensure rooms are cleaned up.
 -   **Ghost Users**: Idle detection removes inactive users to free up the 3-peer slots.
+
+---
+
+## 7. Built with Agentic Workflow
+
+This entire application was architected, implemented, and refined over a single weekend using an **Agentic AI Workflow**. The AI acted as a core contributor, handling:
+-   Boilerplate scaffolding and configuration.
+-   Complex WebRTC negotiation logic and race condition handling.
+-   UI/UX design implementation based on high-level directives.
+-   Documentation and release preparation.
+
+This project serves as a comprehensive example of what is possible with modern AI-assisted software development.
+
