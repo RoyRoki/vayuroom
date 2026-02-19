@@ -41,7 +41,7 @@ For a detailed breakdown of the project plan, state, and architecture decisions,
 ### High-Level Diagram
 
 ```mermaid
-graph TD
+flowchart TD
     ClientA[Client A]
     ClientB[Client B]
     ClientC[Client C]
@@ -49,9 +49,9 @@ graph TD
     TURN[TURN/STUN Servers]
 
     subgraph Mesh Topology
-        ClientA <-->|Peer Connection (Media/Data)| ClientB
-        ClientB <-->|Peer Connection (Media/Data)| ClientC
-        ClientA <-->|Peer Connection (Media/Data)| ClientC
+        ClientA <-->|"Peer Connection (Media/Data)"| ClientB
+        ClientB <-->|"Peer Connection (Media/Data)"| ClientC
+        ClientA <-->|"Peer Connection (Media/Data)"| ClientC
     end
 
     subgraph Signaling
