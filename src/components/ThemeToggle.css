@@ -1,0 +1,9 @@
+.theme-toggle {
+    color: var(--text-secondary);
+    transition: var(--transition-default);
+}
+
+.theme-toggle:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+}

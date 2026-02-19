@@ -43,7 +43,7 @@ export function RoomHeader({ peerCount, connectionStatus, connectionQuality, onL
 
     return (
         <header className="room-header">
-            <div className="room-header-logo" onDoubleClick={handleSecretToggle} style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '12px' }} title="Double click to toggle sound">
+            <div className="room-header-logo" onClick={handleSecretToggle} style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center', gap: '12px' }} title="Click to toggle sound">
                 <Logo
                     size="sm"
                     iconOverlay={

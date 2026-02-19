@@ -3,6 +3,8 @@ import { Logo } from './Logo';
 import { PassphraseStrength } from './PassphraseStrength';
 import { generatePassphrase } from '../lib/utils';
 import { Shield, Shuffle, ArrowRight, Users, EyeOff, Loader2 } from 'lucide-react';
+
+import { ThemeToggle } from './ThemeToggle';
 import './JoinScreen.css';
 
 interface Props {
@@ -29,6 +31,9 @@ export function JoinScreen({ onJoin, isLoading }: Props) {
 
     return (
         <div className="join-screen">
+            <div style={{ position: 'absolute', top: '16px', right: '16px' }}>
+                <ThemeToggle />
+            </div>
             <div className="join-card animate-scale-in">
                 <Logo size="lg" />
                 <p className="join-tagline">
@@ -66,7 +71,7 @@ export function JoinScreen({ onJoin, isLoading }: Props) {
                         onClick={handleGenerate}
                     >
                         <Shuffle size={16} />
-                        Generate secure key
+                        No key? Generate one
                     </button>
 
                     <button

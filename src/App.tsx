@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { JoinScreen } from './components/JoinScreen';
 import { RoomScreen } from './components/RoomScreen';
+import { PermissionDeniedModal } from './components/PermissionDeniedModal';
 import { useCrypto } from './hooks/useCrypto';
 import { useSignaling } from './hooks/useSignaling';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -24,7 +25,10 @@ export default function App() {
     const peerIdRef = useRef(generatePeerId());
     const displayNameRef = useRef(peerIdRef.current);
     const callStartTimeRef = useRef<number | null>(null);
+
     const callerNameRef = useRef<string>('');
+    const [showPermissionModal, setShowPermissionModal] = useState(false);
+    const [pendingCallAction, setPendingCallAction] = useState<(() => void) | null>(null);
 
     const { derived, isLoading, derive, reset: resetCrypto } = useCrypto();
     const media = useMediaDevices();
@@ -120,7 +124,13 @@ export default function App() {
                 setActiveCallType(signal.callType);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Could not access media devices';
-                toast.error(msg);
+                console.error('[App] Media error:', err);
+                if (err instanceof Error && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                    setShowPermissionModal(true);
+                    setPendingCallAction(null); // No auto-retry for answering, just show modal
+                } else {
+                    toast.error(msg);
+                }
             }
         } else {
             // Already active — just record the start time if not set
@@ -366,8 +376,14 @@ export default function App() {
                 addSystemMessage(`${displayNameRef.current} started audio calling`);
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Could not access media devices';
-                toast.error(msg);
                 console.error('[App] Media error:', err);
+                if (err instanceof Error && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                    setShowPermissionModal(true);
+                    // Save retry action
+                    setPendingCallAction(() => () => handleToggleCall(startWithVideo));
+                } else {
+                    toast.error(msg);
+                }
             }
         }
     }, [isCallActive, media, webrtcHook, callSignaling, addSystemMessage, addCallEventMessage, roomCallStatus, playSound]);
@@ -391,7 +407,15 @@ export default function App() {
             await callSignaling.answerCall();
         } catch (err) {
             const msg = err instanceof Error ? err.message : 'Could not access media devices';
-            toast.error(msg);
+            console.error('[App] Media error:', err);
+            if (err instanceof Error && (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')) {
+                setShowPermissionModal(true);
+                // We don't save pending action for accept, as the call might timeout or state change.
+                // But we could try. usage: user allows -> try again -> calls acceptCall again -> signaling?
+                // Be careful re-calling answerCall.
+            } else {
+                toast.error(msg);
+            }
         }
     }, [media, webrtcHook, callSignaling, setIncomingCall, playSound]);
 
@@ -508,6 +532,21 @@ export default function App() {
                     onToggleScreenShare={handleToggleScreenShare}
                 />
             )}
+
+            <PermissionDeniedModal
+                isOpen={showPermissionModal}
+                onClose={() => {
+                    setShowPermissionModal(false);
+                    setPendingCallAction(null);
+                }}
+                onRetry={() => {
+                    setShowPermissionModal(false);
+                    if (pendingCallAction) {
+                        pendingCallAction();
+                        setPendingCallAction(null);
+                    }
+                }}
+            />
         </>
     );
 }

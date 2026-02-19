@@ -1,0 +1,120 @@
+.permission-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.permission-modal {
+    background: var(--glass-bg);
+    /* Use shared glass variable or custom? Let's use custom for stronger contrast if needed, or mapping. */
+    /* Actually for modal, let's use a solid-ish background in light mode or standard glass variables */
+    background: var(--bg-secondary);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.permission-icon-wrapper {
+    width: 64px;
+    height: 64px;
+    background: rgba(255, 59, 48, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: var(--accent-red);
+}
+
+.permission-icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+}
+
+.permission-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+}
+
+.permission-description {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 24px;
+}
+
+.permission-actions {
+    display: flex;
+    gap: 12px;
+    flex-direction: column;
+}
+
+.permission-btn {
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    width: 100%;
+}
+
+.permission-btn.primary {
+    background: var(--accent-blue);
+    color: #fff;
+}
+
+.permission-btn.primary:hover {
+    background: var(--accent-blue-hover);
+}
+
+.permission-btn.secondary {
+    background: var(--bg-tertiary);
+    /* Use tertiary for button background */
+    color: var(--text-primary);
+}
+
+.permission-btn.secondary:hover {
+    background: var(--bg-elevated);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
